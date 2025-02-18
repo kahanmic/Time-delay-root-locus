@@ -1,0 +1,48 @@
+numerator = "1+exp(-s-4)";
+denominator = "2.*s+exp(-s)";  
+%dnum = -exp(-s-4)
+%dden = 2 - exp(-s)
+Reg = [-10 5 0 50];
+minLogLim = -5;
+maxLogLim = 10;
+samples = 400;
+
+% Brute force
+delPoles = []; % M x N matrix of M poles (rows) and N gains (columns)
+delGain = logspace(minLogLim, maxLogLim, samples);
+
+for K = delGain
+    funStr = strcat('@(s)(', denominator, '+', num2str(K),'.*','(' ,numerator, ')', ')');
+    Fun = str2num(funStr);
+    poles = QPmR(Reg, Fun);
+    [~, idxs] = sort(imag(abs(poles)));
+    idx = idxs(1);
+    delPoles = [delPoles, poles(idx)];
+end
+
+plot(real(delPoles), imag(delPoles)); hold on;
+
+%% 
+dKs = diff(delGain);
+K0 = log(minLogLim);
+
+funStr = strcat('@(s)(', denominator, '+', num2str(K0),'.*','(' ,numerator, ')', ')');
+Fun = str2num(funStr);
+initPoles = QPmR(Reg, Fun);
+[~, idxs] = sort(imag(abs(initPoles)));
+idx = idxs(1);
+s0 = initPoles(idx);
+
+poles2 = [s0];
+for dK = dKs
+    a0 = 1+exp(-s0-4);
+    b0 = 2*initPole+exp(-s0);
+    adot0 = -exp(-s0-4);
+    bdot0 = 2-exp(-s0);
+
+    ds = (K0.*b0 - (K0+dK).*b0)./(adot0+(K0+dK).*bdot0);
+    s0 = s0+ ds;
+    ploes2 = [poles2, s0];
+end
+
+
