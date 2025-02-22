@@ -49,9 +49,10 @@ toc
 %plot(real(points_re(a(22):a(23))), imag(points_re(a(22):a(23))))
 %H3(a(22):a(23))
 
+%% Newton
+updated_roots = newton_method(roots, P, D, ds, 1e-6);
+
 %%
-
-
 figure
 %[Ci,Hi]=contour(beta,omega,imag(MM),[0 0],'r');
 grid on 
