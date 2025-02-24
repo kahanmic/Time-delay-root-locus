@@ -1,6 +1,6 @@
 P=[1.5 0.2 0 20.1;1 0 -2.1 0;0 0 3.2 0;0 0 0 1.4];
 D=[0;1.3;3.5;4.3];
-bmin = -30; bmax = 15; wmin = -5; wmax = 30;
+bmin = -30; bmax = 10; wmin = 0; wmax = 500;
 %ds = ((bmax-bmin)*(wmax-wmin))/2000;
 ds = 0.1;
 beta=bmin:ds:bmax;  
@@ -49,15 +49,25 @@ toc
 %plot(real(points_re(a(22):a(23))), imag(points_re(a(22):a(23))))
 %H3(a(22):a(23))
 
-%% Newton
-updated_roots = newton_method(roots, P, D, ds, 1e-6);
 
+updated_roots = newton_method(roots, P, D, ds, 1e-6);
+length(updated_roots)
+num_roots = argp_integral([bmin bmax wmin wmax], P, D, ds)
+%%
+tic
+QPmR([bmin bmax wmin wmax],P,D)
+toc
+
+tic
+Fun=@(s)(1.5*s.^3+0.2*s.^2+20.1)+(s.^3-2.1.*s).*exp(-s*1.3)+3.2.*s.*exp(-s*3.5)+1.4.*exp(-s*4.3);
+R=QPmR([bmin bmax wmin wmax],Fun);
+toc
 %%
 figure
 %[Ci,Hi]=contour(beta,omega,imag(MM),[0 0],'r');
 grid on 
 hold on;
-[Cr,Hr]=contour(beta,omega,real(MM),[0 0],'r');
+%[Cr,Hr]=contour(beta,omega,real(MM),[0 0],'r');
 
 
 [Ci,Hi]=contour(beta,omega,imag(H2),[0 0],'g');

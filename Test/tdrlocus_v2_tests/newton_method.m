@@ -1,7 +1,7 @@
 function roots = newton_method(initial_guess, P, D, ds, de)
 %NEWTON_METHOD is a function that makes finds quasipolynomial roots with
 %desired precision
-%   Detailed explanation goes here
+
     x0 = initial_guess;
     PD = derivate_quasipolynomial(P, D);
     
