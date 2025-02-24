@@ -17,9 +17,9 @@ function H = evaluate_poly(Reg, P, D, ds, is_region)
         S = Reg;
     end
 
-    S2 = S(:);
+    Sv = S(:);
     k = order:-1:0;
-    Hv = ones(1,N)*(exp(-D*S2.').*(P*(S2.^k).'));
+    Hv = ones(1,N)*(exp(-D*Sv.').*(P*(Sv.^k).'));
 
     if is_region
         H = reshape(Hv, [w b]);
