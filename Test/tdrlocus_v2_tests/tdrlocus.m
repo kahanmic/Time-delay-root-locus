@@ -1,5 +1,9 @@
 function tdrlocus(reg, varargin)
 % tdrlocus v2
+% numerator = "1+0.1.*exp(-s)"
+% denominator = "2.*s+exp(-s)"
+
+
 
     %% GUI Variables
     screenSize = get(groot, 'ScreenSize');  % Get user's screen size
@@ -17,6 +21,9 @@ function tdrlocus(reg, varargin)
     %% Variables
     minLogLim = -5;
     maxLogLim = 10;
+    samples = 400;
+    ds = 0.1;
+    delGain = logspace(minLogLim, maxLogLim, samples);
     
     [numP numD] = string2matrix(varargin{1});
     [denP denD] = string2matrix(varargin{2});
@@ -55,8 +62,36 @@ function tdrlocus(reg, varargin)
     drawRL
     
     function drawRL
-        roots = compute_roots(reg, P, D, 0.1)
+        
+        dKs = diff(delGain);
+        K0 = delGain(1);
+
+        P = denP + K0*numP;
+        numdP = derivate_quasipolynomial(numP, D);
+        dendP = derivate_quasipolynomial(denP, D);
+
+        roots = compute_roots(reg, P, D, ds);
+        poles = roots;
         plot(hAx, real(roots), imag(roots), 'rx', 'MarkerSize', 8, 'MarkerFaceColor', 'k', 'LineWidth', 1.5);
+        for dK = dKs
+            b = evaluate_poly(roots, numP, D, ds, false);
+            d = evaluate_poly(roots, dendP, D, ds, false) + K0.*evaluate_poly(roots, numdP, D, ds, false);
+            
+            K0 = K0 + dK;
+            currP = denP+K0*numP;
+            C = -(b./d);
+            ds = C*dK;
+            roots = roots+ ds;
+            roots = newton_method(roots, currP, D, ds, 1e-6);
+            poles = [poles; roots];
+            
+            
+        end
+
+        for i = 1:size(poles, 2)
+            plot(hAx, real(poles(:, i)), imag(poles(:, i)), '-.' ,Color="red", LineWidth=2); 
+            plot(hAx, real(poles(:, i)), -imag(poles(:, i)), '-.' ,Color="red", LineWidth=2); 
+        end
     end
 
 
