@@ -1,5 +1,6 @@
 function [P, D] = string2matrix(str)
     str = erase(str, ' ');
+    str = regexprep(str, '\.(?=[*\^])', '');
     find_exp = regexp(str, 'exp\([^)]*\)', 'match');
     polys = split(str, find_exp);
     

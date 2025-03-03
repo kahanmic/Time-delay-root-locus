@@ -1,6 +1,6 @@
 function [nP, dP, D] = create_rl_matrix(numP, numD, denP, denD)
     all_delays = [numD; denD];
-    nrep_delays = unique(all_delays)
+    nrep_delays = unique(all_delays);
     N = length(nrep_delays); % N number of delays
     n = max([size(numP, 2), size(denP, 2)]);
 
