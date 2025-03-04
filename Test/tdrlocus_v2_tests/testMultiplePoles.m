@@ -1,4 +1,4 @@
-function tdrlocus(reg, varargin)
+function testMultiplePoles(reg, varargin)
 % tdrlocus v2
 % numerator = "1+0.1.*exp(-s)"
 % denominator = "2.*s+exp(-s)"
@@ -32,8 +32,6 @@ function tdrlocus(reg, varargin)
     dendP = [];
     D = [];
     clPoles = [];
-    numRealPoles = [];
-    numRealZeros = [];
 
 
     % minLogLim = -5;
@@ -45,7 +43,7 @@ function tdrlocus(reg, varargin)
     % Limits of gain on slider
     minSliderLim = 0.00147;
 
-    %maxSliderLim = 0.00152;
+    maxSliderLim = 0.00152;
     maxSliderLim = 10;
     
     
@@ -110,13 +108,10 @@ function tdrlocus(reg, varargin)
 
         olZeros = compute_roots(reg, numP, D, ds);
         olPoles = compute_roots(reg, denP, D, ds);
-        numRealPoles = argp_integral([reg(1) reg(2) -ds ds], denP, D, ds); % can be double checked
-        numRealZeros = argp_integral([reg(1) reg(2) -ds ds], numP, D, ds);
         clPoles = compute_roots(reg, denP+numP, D, ds);
 
         % Draw root locus
-        lines = draw_rl_lines(1e10, olZeros, olPoles, numP, denP, D,...
-            numdP, dendP, ds, 0.01, 1, numRealPoles, numRealZeros);
+        lines = draw_rl_lines(1e12, olZeros, olPoles, numP, denP, D, numdP, dendP, ds, 0.01, 1);
         numLines = length(lines);
         rlocusLines = cell(2*numLines, 1);
         for i = 1:numLines
@@ -149,6 +144,7 @@ function tdrlocus(reg, varargin)
         clPoles = compute_roots(reg, denP+event.Value*numP, D, ds);
         num = evaluate_poly(clPoles, numP, D, ds, false);
         den = evaluate_poly(clPoles, dendP, D, ds, false) + event.Value.*evaluate_poly(clPoles, numdP, D, ds, false);
+        den
         updateCLPoles;
     end
 

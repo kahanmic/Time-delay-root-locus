@@ -20,14 +20,15 @@ function [P, D] = string2matrix(str)
     orders = [];
     for i = 1:length(polys)
         delay = delays(i);
-        poly = polys(i);
+        poly = polys(i);  % split with exp(...)
 
-        % new
-        if count(poly, "(") == 0 & (count(poly, "+") > 0 | count(poly, "-"))
+        % for a+b*exp() or a+exp()
+        if count(poly, "(") == 0 && (count(poly, "+") > 0 || count(poly, "-") > 0) && length(delays) > 1
 
             ch_pol = char(poly);
-           
-            if ch_pol(end) ~= '*'
+            
+            % Asuming there is exponent
+            if ch_pol(end) ~= '*' 
                 poly = [string(ch_pol(1:end-1)); "1"];
             else
                 poly = string(ch_pol(1:end-1));
@@ -38,7 +39,7 @@ function [P, D] = string2matrix(str)
 
 
         poly = split(poly, ["(", ")"]);
-        poly = poly(poly ~= "+" & poly ~= "" & poly ~= "*");
+        poly = poly(poly ~= "+" & poly ~= "" & poly ~= "*"); % clears from "*" etc
         coefs = [];
         if length(poly) > 1
             const_coefs = get_poly_coefs(poly(1));

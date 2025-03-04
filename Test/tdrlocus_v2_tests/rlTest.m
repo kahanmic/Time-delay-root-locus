@@ -55,7 +55,7 @@ while max(abs(roots-clZeros)) > 1e-6 & cnt < 400
     d = evaluate_poly(roots, dendP, D, ds, false) + K0.*evaluate_poly(roots, numdP, D, ds, false);
 
     C = -(b./d);
-    dK = 0.05/min(abs(C)); % Makes sure, that the next point won't be closer then 0.01 in radius
+    dK = 0.01/min(abs(C)); % Makes sure, that the next point won't be closer then 0.01 in radius
     if dK > 1e10
         dK = 1e10;
     end
