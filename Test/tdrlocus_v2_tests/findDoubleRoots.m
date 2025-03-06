@@ -30,8 +30,8 @@ for i = 1:length(dcontours)
     plot(dcontours{i}.x, dcontours{i}.y, "--r", LineWidth=1); hold on
 end
 %%
-numP = [1, 4.4774, 675.9528];
-denP = [1 2 0];
+denP = [1, 4.4774, 675.9528];
+numP = [1 2 0];
 D = 0;
 dk = 0.0001;
 kmin = 0; kmax = 1;
@@ -41,8 +41,8 @@ points = smin:ds:smax;
 Ks = kmin:dk:kmax;
 
 s0 = (smax-smin)/2;
-s0= -50
-K0 = 10000;
+s0= -1;
+K0 = 0;
 
 P = denP+K0*numP;
 dP = derivate_quasipolynomial(P, D);

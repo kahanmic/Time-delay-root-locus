@@ -1,26 +1,16 @@
-function lines = draw_rl_lines(gainLim, clZeros, clPoles, numP, denP, D, numdP, dendP, ds, minStep, maxStep, numRealPoles, numRealzeros)
+function lines = draw_rl_lines(reg, gainLim, clZeros, clPoles, numP, denP, D, numdP, dendP, ds, minStep, maxStep)
     K = 0;
-    roots = clPoles;
-    poles = roots;
-    lines = {};
-    
-    cnt = 0;
-    maxCnt = round(100/maxStep);
+    dK = 0.1;
+    poles = clPoles;
 
-    while K < gainLim && cnt < maxCnt
-        num = evaluate_poly(roots, numP, D, ds, false);
-        den = evaluate_poly(roots, dendP, D, ds, false) + K.*evaluate_poly(roots, numdP, D, ds, false);
-        C = -(num./den);
-
-        dK = max([minStep/min(abs(C)), maxStep/max(abs(C))]); % needs to be checked
-
-        K = K + dK;
-        ds = C*dK;
-        currP = denP+K*numP;
-        roots = roots+ds;
-        roots = newton_method(roots, currP, D, ds, 1e-6);
-        poles = [poles; roots];
-        cnt = cnt + 1;
+    rePolesZeros = get_real_poles_zeros(clPoles, clZeros);
+    breakpoints = [sort(find_breakpoints(reg, numP, denP, D, ds, rePolesZeros)), gainLim];
+    for maxK = breakpoints
+        poles = [poles; draw_rl_lines_section(poles(end,:), K, maxK, reg, numP, denP, D, dendP, numdP, ds, minStep, maxStep)];
+        K = maxK + dK;
+        if K < gainLim
+            poles = [poles; compute_roots(reg, denP + K*numP, D, ds)];
+        end
     end
     
     numLines = size(poles, 2);
