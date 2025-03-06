@@ -26,6 +26,7 @@ function tdrlocus(reg, varargin)
     plotPoles = [];
     plotZeros = [];
     plotCLPoles = [];
+    plotNextRoot = [];
 
     numP = [];
     denP = [];
@@ -34,12 +35,10 @@ function tdrlocus(reg, varargin)
     D = [];
     clPoles = [];
     ds = 0.1;
-    maxsStep = 0.5;
-    minsStep = 0.01;
 
     % Limits of gain on slider
     minSliderLim = 0;
-    maxSliderLim = 1e10;
+    maxSliderLim = 1e4;
     
     % Logical variables
     movePoles = false;
@@ -99,8 +98,7 @@ function tdrlocus(reg, varargin)
 
     % Gain slider
     gainSlider = uislider(myLayout, Value=1);
-    gainSlider.Limits = [minSliderLim, log10(maxSliderLim)];
-    gainSlider.MajorTicks = linspace(minSliderLim, log10(maxSliderLim), 10);
+    gainSlider.Limits = [minSliderLim, maxSliderLim];
     gainSlider.Layout.Column = [3 4];
     gainSlider.Layout.Row = [3 4];
 
@@ -109,7 +107,7 @@ function tdrlocus(reg, varargin)
 
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
-        Limits=[minSliderLim, maxSliderLim],...
+        Limits=[minSliderLim, power(10, maxSliderLim)],...
         ValueChangedFcn=@editGain, Value=1, HorizontalAlignment='center');
     gainEdit.Layout.Column = 2;
     gainEdit.Layout.Row = 4;
@@ -143,7 +141,7 @@ function tdrlocus(reg, varargin)
 
         % Draw root locus
         lines = draw_rl_lines(reg, 1e10, olZeros, olPoles, numP, denP, D,...
-            numdP, dendP, ds, minsStep, maxsStep);
+            numdP, dendP, ds, 0.01, 0.5);
         numLines = length(lines);
         rlocusLines = cell(2*numLines, 1);
         for i = 1:numLines
@@ -170,27 +168,20 @@ function tdrlocus(reg, varargin)
 
 % Gain slider callback (update after slider movement stopped)
     function sliderMovement(~, event)
-        val = event.Value^10;
-        dK = val - gainEdit.Value;
+        dK = event.Value - gainEdit.Value;
         
         %clPoles = compute_roots(reg, denP+event.Value*numP, D, ds);
-        newPoles = iterate_root(clPoles, numP, denP, D, dendP, numdP, ds, gainEdit.Value, dK);
-        if max(abs(newPoles - clPoles)) > maxsStep
-            clPoles = compute_roots(reg, denP+val*numP, D, ds);
-        else
-            clPoles = newPoles;
-        end
+        clPoles = iterate_root(clPoles, numP, denP, D, dendP, numdP, ds, gainEdit.Value, dK);
         %clPoles = [poles, conj(poles)];
-        gainEdit.Value = val;
+        gainEdit.Value = event.Value;
         updateCLPoles;
     end
 
 % Gain slider callback (update after slider movement stopped)
     function sliderMoved(~, event)
-        val = event.Value^10;
-        clPoles = compute_roots(reg, denP+val*numP, D, ds);
+        clPoles = compute_roots(reg, denP+event.Value*numP, D, ds);
         %clPoles = [poles, conj(poles)];
-        gainEdit.Value = val;
+        gainEdit.Value = event.Value;
         updateCLPoles;
     end
 
@@ -199,7 +190,7 @@ function tdrlocus(reg, varargin)
         %dK = src.Value - gainEdit.Value;
         clPoles = compute_roots(reg, denP+src.Value*numP, D, ds);
         %clPoles = [poles, conj(poles)];
-        gainSlider.Value = log10(src.Value);
+        gainSlider.Value = src.Value;
         updateCLPoles;
     end
 
@@ -211,6 +202,8 @@ function tdrlocus(reg, varargin)
 % Disable changing poles by dragging
     function moveOff(~, ~)
         movePoles = false;
+        delete(plotNextRoot)
+        plotNextRoot = [];
     end
 
     function mousePushed(~, ~)
@@ -222,37 +215,38 @@ function tdrlocus(reg, varargin)
 
     function mouseReleased(~, ~)
         movingPolesNow = false;
+        disp("a")
         set(hFig, 'WindowButtonMotionFcn', []);
+        delete(plotNextRoot);
+        drawnow
     end
 
     function holdAndChangeGain(~, ~)
         cp = get(hAx, 'CurrentPoint');
+        
         x = cp(1,1);
         y = cp(1,2);
         activeXReg = diff(hAx.XLim)/10;
         activeYReg = diff(hAx.YLim)/10;
         dists = sqrt(((plotCLPoles.XData - x) / activeXReg).^2 + ((plotCLPoles.YData - y) / activeYReg).^2);
+        % xdists = abs(plotCLPoles.XData - x)
+        % ydists = abs(plotCLPoles.YData - x)
 
         [minVal, minIdx] = min(dists);
+        % if minVal < (activeXReg + activeYReg)
+        %     s0 = clPoles(minIdx);
+        %     deltas = x+y*1i - s0;
+        %     dK = get_dk(s0, gainEdit.Value, numP, numdP, dendP, D, deltas);
+        %     gainEdit.Value = gainEdit.Value + dK;
+        %     clPoles = compute_roots(reg, denP+gainEdit.Value*numP, D, ds);
+        %     updateCLPoles;
+        % end
         if minVal < (activeXReg + activeYReg) && movingPolesNow
-            if minIdx > length(clPoles) % conjurates
-                minIdx = minIdx - length(clPoles);
-                y = -y;
-            end
             s0 = clPoles(minIdx);
             K0 = gainEdit.Value;
             sVec = (x + y*1i) - s0;
-            rProj = pole_projection(s0, K0, numP, denP, numdP, dendP, D, sVec);
-
-            dK = get_dk(s0, K0, numP, numdP, dendP, D, rProj);
-            K = K0 + dK;
-            K = min([abs(K), maxSliderLim]);
-            currP = denP + K*numP;
-            clPoles = compute_roots(reg, currP, D, ds);
-            %clPoles = iterate_root(clPoles, numP, denP, D, dendP, numdP, K0, dK, 0.01, 0.1);
-            gainEdit.Value = K;
-            updateCLPoles
-            pause(0.1)
+            nextRoot = pole_projection(s0, K0, numP, numdP, dendP, D, sVec);
+            plotNextRoot = plot(hAx, real(nextRoot), imag(nextRoot), "bx", Tag="test");
         end
     end
 
@@ -306,4 +300,19 @@ function tdrlocus(reg, varargin)
         z.Direction = "out";
         z.Enable = "off";
     end
+end
+
+function rootPos = pole_projection(s0, K0, numP, numdP, dendP, D, sVec)
+    num = evaluate_poly(s0, numP, D, 0.1, false);
+    den = evaluate_poly(s0, dendP, D, 0.1, false) + K0.*evaluate_poly(s0, numdP, D, 0.1,  false);
+    C = -(num./den)
+    sVec
+    v1 = [real(C); imag(C)];
+    v2 = [real(sVec), imag(sVec)];
+    
+    rProj = dot(v1, v2)/dot(v1, v1)*C;
+
+    rootPos = s0 + rProj;
+
+
 end
