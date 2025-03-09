@@ -1,14 +1,21 @@
 function [P, D] = string2matrix(str)
-    str = erase(str, ' ');
-    str = regexprep(str, '\.(?=[*\^])', '');
-    find_exp = regexp(str, 'exp\([^)]*\)', 'match');
-    polys = split(str, find_exp);
+%string2matrix function converts quasipolynomial string to matrix notation
+% Rules are that each part of quasipolynomial corresponding to given
+% exponential must be in brackets (for example (3*s^3+s^2+4)*exp(...) +
+% (...)*exp(...)) and every polynomial closed in brackets must have "+"
+% sign in front of it
+
+    str = erase(str, ' ');  % Delete white spaces
+    str = regexprep(str, '\.(?=[*\^])', '');    % removes every dot before '*' and '^'
+    find_exp = regexp(str, 'exp\([^)]*\)', 'match');    % find all exp(...)
+    polys = split(str, find_exp);   % Splits by all exponents by "exp(...)"
     
     polys = polys(polys ~= ""); % deletes empty strings ("")
     delays = [];
-    for expn = find_exp
-        str_delay = string(erase(expn, ["exp(", ")", "s", "*", "-"])); % finding delay
-        if str_delay == ""
+
+    for expn = find_exp % finding delays for each polynomial
+        str_delay = string(erase(expn, ["exp(", ")", "s", "*", "-"])); 
+        if str_delay == ""  % case: exp(-s)
             delays(end+1) = 1;
         else
             delays(end+1) = str2double(str_delay);
@@ -16,11 +23,11 @@ function [P, D] = string2matrix(str)
     end
     delays(end+1) = 0;
     
-    pol_info = {};
+    pol_info = {};  % array of coefficients and delay for the quasipolynomial
     orders = [];
     for i = 1:length(polys)
         delay = delays(i);
-        poly = polys(i);  % split with exp(...)
+        poly = polys(i);  % split by exp(...)
 
         % for a+b*exp() or a+exp()
         if count(poly, "(") == 0 && (count(poly, "+") > 0 || count(poly, "-") > 0) && length(delays) > 1
@@ -28,26 +35,26 @@ function [P, D] = string2matrix(str)
             ch_pol = char(poly);
             
             % Asuming there is exponent
-            if ch_pol(end) ~= '*' 
+            if ch_pol(end) ~= '*' % case ...+exp(...)
                 poly = [string(ch_pol(1:end-1)); "1"];
-            else
-                poly = string(ch_pol(1:end-1));
+            else % TODO: case ...-exp(...),     (-s ign)
+                poly = string(ch_pol(1:end-1)); % erase "*" at the end
                 poly = split(poly, "+");
             end
             
         end
 
 
-        poly = split(poly, ["(", ")"]);
+        poly = split(poly, ["(", ")"]); % gets each polynomial in the bracket (...)+(...)
         poly = poly(poly ~= "+" & poly ~= "" & poly ~= "*"); % clears from "*" etc
         coefs = [];
-        if length(poly) > 1
+        if length(poly) > 1 % case (...) + (...)
             const_coefs = get_poly_coefs(poly(1));
             coefs = get_poly_coefs(poly(2));
             orders(end+1) = length(const_coefs);
             pol_info{end+1} = struct('coefs', const_coefs, 'delay', 0);
             
-        else
+        else % case (...)
             ch_pol = char(poly);
             if ch_pol(end) == '*' 
                 poly = string(ch_pol(1:end-1));

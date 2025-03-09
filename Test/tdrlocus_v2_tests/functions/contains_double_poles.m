@@ -5,5 +5,5 @@ function hasDoublePoles = contains_double_poles(Reg, numP, denP, D, ds)
         P = denP + K*numP;
         numRoots = [numRoots, argp_integral(Reg, P, D, ds)];
     end
-    hasDoublePoles = (prod(numRoots) == 0) && (sum(numRoots) > 0);
+    hasDoublePoles = (prod(numRoots) == 0) && (sum(numRoots) > 0); % maybe change to any/all
 end

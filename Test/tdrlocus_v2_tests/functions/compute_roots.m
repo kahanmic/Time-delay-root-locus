@@ -22,9 +22,9 @@ function polyRoots = compute_roots(reg, P, D, ds)
     polyRoots = newton_method(rootsApprox, P, D, 1e-6);
     numRoots = argp_integral(reg, P, D, ds);
 
-    if length(polyRoots) ~= numRoots
-        polyRoots = compute_roots(reg, P, D, ds/2);
-    end
+    % if length(polyRoots) ~= numRoots
+    %     polyRoots = compute_roots(reg, P, D, ds/2);
+    % end
 
     % Sort firstly by imaginary part, then by real part
     sortedRoots = sortrows([imag(polyRoots).' real(polyRoots).'], [1 2]);
