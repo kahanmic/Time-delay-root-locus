@@ -542,6 +542,7 @@ end
 
 % Slider window callback
 function openSliderWindow(~, ~)
+    
     numSliders = paramInfo.numEntries;
     textWidth = max(length(paramNum), length(paramDen))*7;
     
