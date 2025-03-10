@@ -54,6 +54,7 @@ function tdrlocus(reg, varargin)
     ds = 0.1;   % Precision of grid
     maxStep = 0.5; % Max and min shift of poles for gain change
     minsStep = 0.01;
+    currGain = 1;
 
     % Limits of gain on slider
     minSliderLim = 1e-4;
@@ -75,6 +76,11 @@ function tdrlocus(reg, varargin)
         yLimits = [defaultReg(3) defaultReg(4)];
     end
     %% Icon setup
+
+    % Undo button icon
+    [img, ~, alpha] = imread('./images/undo_icon.png');
+    undoIcon = setWhiteBackground(img, alpha);
+
     % Pan button icon 
     [img, ~, alpha] = imread('./images/pan_icon.png');
     panIcon = setWhiteBackground(img, alpha);
@@ -117,6 +123,9 @@ function tdrlocus(reg, varargin)
         ClickedCallback=@openSliderWindow);
     hMovePoles = uitoggletool(hToolbar, CData=movePolesIcon, ...
         Tooltip='Change pole gain', OnCallback=@moveOn, OffCallback=@moveOff);
+    hRegSelect = uipushtool(hToolbar, CData=regIcon, Tooltip='Select plot region', ...
+        ClickedCallback=@openRegPopupCallback);
+    hRegAuto = uipushtool(hToolbar, CData=regAutoIcon, Tooltip='Auto-adjust plot region');
 
     % Manual pole/zero selection
     hPoleSelect = uitoggletool(hToolbar, CData=poleIcon, Tooltip='Add real pole', Separator='on', Tag='1');
@@ -128,6 +137,17 @@ function tdrlocus(reg, varargin)
     hPanBtn = uitoggletool(hToolbar, CData=panIcon, Separator='on', OnCallback=@panOn, OffCallback=@panOff);
     hZoomInBtn = uitoggletool(hToolbar, CData=zoomInIcon, OnCallback=@zoomInOn, OffCallback=@zoomInOff);
     hZoomOutBtn = uitoggletool(hToolbar, CData=zoomOutIcon, OnCallback=@zoomOutOn, OffCallback=@zoomOutOff);
+
+    % Shifting undo icon to the right hand side
+    spacerIcon = NaN(16, 16, 3); % A completely transparent image
+    uipushtool(hToolbar, CData=spacerIcon, Enable='off', Separator='on');
+    for empty = 1:round((figSize(1)- 12*28 - 3*5)/28)
+        uipushtool(hToolbar, CData=spacerIcon, Enable='off', Separator='off');
+    end
+    
+    % Toolbar undo button
+    hUndo = uipushtool(hToolbar, CData=undoIcon, TooltipString='Undo', ...
+        ClickedCallback=@doUndo);
 
     % Plot axes
     hAx = uiaxes(myLayout, Color=axesColor, Box="on", XGrid="on", YGrid="on", ...
@@ -144,7 +164,7 @@ function tdrlocus(reg, varargin)
     hYAxis = plot(hAx, [0 0], yLimits, ':k', 'LineWidth', 1, Tag='axes');
 
     % Gain slider
-    gainSlider = uislider(myLayout, Value=1);
+    gainSlider = uislider(myLayout, Value=log10(currGain));
     gainSlider.Limits = [log10(minSliderLim), log10(maxSliderLim)];
     gainSlider.MajorTicks = linspace(log10(minSliderLim), log10(maxSliderLim), 11);
     gainSlider.Layout.Column = [3 4];
@@ -156,7 +176,7 @@ function tdrlocus(reg, varargin)
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
         Limits=[0, maxSliderLim],...
-        ValueChangedFcn=@editGain, Value=1, HorizontalAlignment='center');
+        ValueChangedFcn=@editGain, Value=currGain, HorizontalAlignment='center');
     gainEdit.Layout.Column = 2;
     gainEdit.Layout.Row = 4;
 
@@ -165,6 +185,7 @@ function tdrlocus(reg, varargin)
     % Add listeners to update the axis lines when limits change
     addlistener(hAx, 'XLim', 'PostSet', @(~, ~) updateAxes);
     addlistener(hAx, 'YLim', 'PostSet', @(~, ~) updateAxes);
+    hRegAuto.ClickedCallback = @(src, event)redrawRegion(src, true);
     hPoleSelect.OnCallback = @(src, event)toggleModeSelect(src, hPolesSelect, ...
         hZeroSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
     hPolesSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
@@ -250,23 +271,22 @@ function tdrlocus(reg, varargin)
             reg(4) = max([reg(4), max(imag(lines{i}))]);
         end
         drawPolesZeros
+        saveToStack(true)
     end
 
-    function saveAndSetParams(params)
-        
-        % if all(isKey(paramInfo))
-        if paramInfo.numEntries == 0
-            paramInfo(params) = ones(1, length(params));  
-        elseif ~all(isKey(paramInfo, params)) % Add new, remove old, keep these param from params that are already in paramInfo
-            newParams = params(~isKey(paramInfo, params));
-            allKeys = paramInfo.keys;
-            oldKeys = allKeys(~ismember(allKeys, params));
-            paramInfo = paramInfo.remove(oldKeys);
-            paramInfo(newParams) = ones(1, length(newParams));
-        end
+function saveAndSetParams(params)
+    if paramInfo.numEntries == 0
+        paramInfo(params) = ones(1, length(params));  
+    elseif ~all(isKey(paramInfo, params)) % Add new, remove old, keep these param from params that are already in paramInfo
+        newParams = params(~isKey(paramInfo, params));
+        allKeys = paramInfo.keys;
+        oldKeys = allKeys(~ismember(allKeys, params));
+        paramInfo = paramInfo.remove(oldKeys);
+        paramInfo(newParams) = ones(1, length(newParams));
     end
+end
 
-    function subStr = substituteParams(parStr)
+function subStr = substituteParams(parStr)
         subStr = replace(parStr, paramInfo.keys, string(paramInfo(paramInfo.keys)));
     end
 
@@ -291,7 +311,7 @@ function drawPolesZeros
 end
 
 % Adds state of root locus to the stack
-function saveToStack
+    function saveToStack(newState)
     stackRL = cell([2 length(rlocusLines)]);
     for idx = 1:length(rlocusLines)
         stackRL{1, idx} = rlocusLines{idx}.XData;
@@ -306,22 +326,26 @@ function saveToStack
     stackDenP = denP;
     stackD = D; 
     stackGain = gainEdit.Value;
-    % stackParNum = paramNum;
-    % stackParDen = paramDen;
+    stackParNum = paramNum;
+    stackParDen = paramDen;
+    stackReg = reg;
+    stackParamInfo = paramInfo;
     
     % saves to undo stack from temporary stack
     if helpStack.getSize() > 0
         [stackRLtmp, stackOLPoletmp, stackOLZerotmp, stackCLPoletmp, ...
-            stackTFTexttmp, stackNumtmp, stackDentmp, stackGaintmp, ...
-            stackParNumtmp, stackParDentmp, stackParTexttmp] = helpStack.pop();
-        undoStack.push(stackRLtmp, stackOLPoletmp, stackOLZerotmp, ...
-            stackCLPoletmp, stackTFTexttmp, stackNumtmp, stackDentmp, ...
-            stackGaintmp, stackParNumtmp, stackParDentmp, stackParTexttmp);
+            stackNumPtmp, stackDenPtmp, stackDtmp, stackGaintmp, ...
+            stackParNumtmp, stackParDentmp, stackParamInfotmp, stackRegtmp] = helpStack.pop();
+        if newState
+            undoStack.push(stackRLtmp, stackOLPoletmp, stackOLZerotmp, ...
+                stackCLPoletmp, stackNumPtmp, stackDenPtmp, stackDtmp, ...
+                stackGaintmp, stackParNumtmp, stackParDentmp, stackParamInfotmp, stackRegtmp);
+        end
     end
     helpStack.push(stackRL, stackOLPole, stackOLZero, stackCLPole, ...
-        stackTFText, stackNum, stackDen, stackGain, stackParNum, ...
-        stackParDen, stackParText);
-end
+        stackNumP, stackDenP, stackD, stackGain, stackParNum, ...
+        stackParDen, stackParamInfo, stackReg);
+    end
 
 function redraw(varargin)
     clearCanvas
@@ -362,6 +386,44 @@ function setEmptyData
 end
 
 %% Callback functions
+
+% Undo action callback
+function doUndo(~, ~)
+    undoStack.getSize()
+    if undoStack.getSize() > 0
+        [rlocusLinesData, olPolesData, olZerosData, clPolesData, ...
+            numPData, denPData, DData, gainData, parNumData, parDenData,...
+            paramInfoData, regData] = undoStack.undo();
+        
+        
+        if ~isempty(rlocusLinesData)
+            clearCanvas();
+            % Plot root locus
+            for idx = 1:length(rlocusLinesData)
+                rlocusLines{idx} = plot(hAx, rlocusLinesData{1, idx}, ...
+                    rlocusLinesData{2, idx}, Color=RLLineCol ,Tag="rlocus");
+            end
+            
+            olPoles = olPolesData;
+            olZeros = olZerosData;
+            clPoles = clPolesData;
+            numP = numPData;
+            denP = denPData;
+            D = DData;
+            currGain = gainData;
+            gainEdit.Value = currGain;
+            gainSlider.Value = log10(currGain);
+            paramNum = parNumData;
+            paramDen = parDenData;
+            paramInfo = paramInfoData;
+            reg = regData;
+
+            drawPolesZeros
+            setCurrentSystem(numP, D, denP, D);
+            saveToStack(false);
+        end
+    end 
+end 
 
 % Axis callback function
 function updateAxes
@@ -460,7 +522,9 @@ function sliderMoved(~, event)
     P = denP+val*numP;
     clPoles = compute_roots(reg, P, D, ds);
     gainEdit.Value = val;
+
     updateCLPoles;
+    saveToStack(true);
 end
 
 % Edit gain callback
@@ -516,9 +580,46 @@ function openSliderWindow(~, ~)
     function editParamValue(src, ~)
         parKey = src.Tag;
         paramInfo(parKey) = src.Value;
-    
         redraw(paramNum, paramDen);
     end
+end
+
+% Manual region callback
+function openRegPopupCallback(src, ~)
+    hRegPopupFig = uifigure(Name='Select region limits', Position=[500, 300, 250, 160]);
+    hRegLabel = uilabel(hRegPopupFig, Text='Select plot region limits', Position=[60 135 250 22]);
+    uilabel(hRegPopupFig, Text='Real limits:', Position=[5 90 90 22]);
+    uilabel(hRegPopupFig, Text='Min', Position=[125 112 90 22]);
+    uilabel(hRegPopupFig, Text='Max', Position=[200 112 90 22]);
+    hMinReal = uieditfield(hRegPopupFig, 'numeric', Position=[110 90 50 22], Value=reg(1));
+    hMaxReal = uieditfield(hRegPopupFig, 'numeric', Position=[185 90 50 22], Value=reg(2));
+    uilabel(hRegPopupFig, Text='Imaginary limits:', Position=[5 45 90 22]);
+    uilabel(hRegPopupFig, Text='Min', Position=[125 67 50 22]);
+    uilabel(hRegPopupFig, Text='Max', Position=[200 67 50 22]);
+    hMinImag = uieditfield(hRegPopupFig, 'numeric', Position=[110 45 50 22], Value=reg(3));
+    hMaxImag = uieditfield(hRegPopupFig, "numeric", Position=[185 45 50 22], Value=reg(4));
+    hPlotButton = uibutton(hRegPopupFig, Text="Plot", Position=[100 10 50 22], ButtonPushedFcn=@setNewReg);
+    
+
+    function setNewReg(~, ~)
+        reg = [hMinReal.Value hMaxReal.Value min([hMinImag.Value, 0]) hMaxImag.Value];
+        redrawRegion(src, false);
+        close(hRegPopupFig);
+    end
+
+end
+
+% Automatic region callback
+function redrawRegion(~, auto)
+    if auto == true
+        xMin = hAx.XLim(1);
+        xMax = hAx.XLim(2);
+        yMin = max([hAx.YLim(1), 0]);
+        yMax = hAx.YLim(2);
+        reg = [xMin xMax yMin yMax];
+    end
+    
+    redraw(numP, denP, D)
 end
 
 % Enable changing gain by dragging
@@ -582,6 +683,7 @@ function mouseReleased(~, ~)
     movingPolesNow = false;
     if movePoles
         set(hFig, "Pointer", "custom", "PointerShapeCData", moveCursorMat, "PointerShapeHotSpot", [10, 9]);
+        saveToStack(true);
     end
     set(hFig, 'WindowButtonMotionFcn', []);
 end

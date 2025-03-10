@@ -100,19 +100,6 @@ classdef UndoStack < handle
                 obj.StackParamDen(end) = [];
                 obj.StackParamInfo(end) = [];
                 obj.StackReg(end) = [];
-            else % maybe remove else
-                rl = [];
-                olpole = [];
-                olzero = [];
-                clpole = [];
-                numP = 1;
-                denP = 1;
-                D = 0;               
-                gain = 1;
-                parnum = '';    % change in the future
-                parden = '';
-                parinfo = dictionary();
-                reg = [];
             end
         end
 
