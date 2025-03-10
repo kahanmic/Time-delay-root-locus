@@ -3,7 +3,8 @@ function tdrlocus(reg, varargin)
 % numerator = "1+0.1.*exp(-s)"; denominator = "2.*s+exp(-s)"; Reg = [-10 5 0 50];
 % tdrlocus(Reg, numerator, denominator)
 % denominator = "2.*s+exp(-s)"
-%numP = [1; 0.0183]; numD = [0; 1]; denP = [2 0; 0 1]; denD = [0; 1];
+% numP = [1; 0.0183]; numD = [0; 1]; denP = [2 0; 0 1]; denD = [0; 1];
+% tdrlocus(Reg, "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)")
 
     %% Add path to functions
     addpath(fullfile(pwd, 'functions'));
@@ -35,6 +36,11 @@ function tdrlocus(reg, varargin)
     numdP = 0;
     dendP = 0;
 
+    % Parameters
+    paramInfo = dictionary();
+    paramNum = '';
+    paramDen = '';
+
     % Matrix notation of: denominator + K*numerator
     P = 2;
     D = 0;
@@ -46,12 +52,16 @@ function tdrlocus(reg, varargin)
 
     % Precision data
     ds = 0.1;   % Precision of grid
-    maxsStep = 0.5; % Max and min shift of poles for gain change
+    maxStep = 0.5; % Max and min shift of poles for gain change
     minsStep = 0.01;
 
     % Limits of gain on slider
-    minSliderLim = 0;
-    maxSliderLim = 1e10;
+    minSliderLim = 1e-4;
+    maxSliderLim = 1e8;
+
+    % Modes for adding poles and zeros by clicking
+    selectionModes = {'RealPole', 'ImagPole', 'RealZero', 'ImagZero'};
+    selectedMode = selectionModes{1};
     
     % Logical variables
     movePoles = false;  % Bool for changing gain by moving poles mode
@@ -102,8 +112,17 @@ function tdrlocus(reg, varargin)
     hTBSelectTDTF = uipushtool(hToolbar, CData=loadIconTDTF, ...
         Tooltip='Edit time delay transfer function', ...
         ClickedCallback=@openTDTFPopupCallback);
+    hVarParam = uipushtool(hToolbar, CData=varParamIcon, ...
+        Tooltip='Change parameters for time delay transfer function', ...
+        ClickedCallback=@openSliderWindow);
     hMovePoles = uitoggletool(hToolbar, CData=movePolesIcon, ...
         Tooltip='Change pole gain', OnCallback=@moveOn, OffCallback=@moveOff);
+
+    % Manual pole/zero selection
+    hPoleSelect = uitoggletool(hToolbar, CData=poleIcon, Tooltip='Add real pole', Separator='on', Tag='1');
+    hPolesSelect = uitoggletool(hToolbar, CData=polesIcon, Tooltip='Add imaginary pole', Tag='2');
+    hZeroSelect = uitoggletool(hToolbar, CData=zeroIcon, Tooltip='Add real zero', Tag='3');
+    hZerosSelect = uitoggletool(hToolbar, CData=zerosIcon, Tooltip='Add imaginary zero', Tag='4');
     
     % Zoom in/out + pan buttons
     hPanBtn = uitoggletool(hToolbar, CData=panIcon, Separator='on', OnCallback=@panOn, OffCallback=@panOff);
@@ -126,8 +145,8 @@ function tdrlocus(reg, varargin)
 
     % Gain slider
     gainSlider = uislider(myLayout, Value=1);
-    gainSlider.Limits = [minSliderLim, log10(maxSliderLim)];
-    gainSlider.MajorTicks = linspace(minSliderLim, log10(maxSliderLim), 10);
+    gainSlider.Limits = [log10(minSliderLim), log10(maxSliderLim)];
+    gainSlider.MajorTicks = linspace(log10(minSliderLim), log10(maxSliderLim), 11);
     gainSlider.Layout.Column = [3 4];
     gainSlider.Layout.Row = [3 4];
 
@@ -136,7 +155,7 @@ function tdrlocus(reg, varargin)
 
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
-        Limits=[minSliderLim, maxSliderLim],...
+        Limits=[0, maxSliderLim],...
         ValueChangedFcn=@editGain, Value=1, HorizontalAlignment='center');
     gainEdit.Layout.Column = 2;
     gainEdit.Layout.Row = 4;
@@ -146,6 +165,14 @@ function tdrlocus(reg, varargin)
     % Add listeners to update the axis lines when limits change
     addlistener(hAx, 'XLim', 'PostSet', @(~, ~) updateAxes);
     addlistener(hAx, 'YLim', 'PostSet', @(~, ~) updateAxes);
+    hPoleSelect.OnCallback = @(src, event)toggleModeSelect(src, hPolesSelect, ...
+        hZeroSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
+    hPolesSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
+        hZeroSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
+    hZeroSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
+        hPolesSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
+    hZerosSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
+        hPolesSelect, hZeroSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
 
     %% _____Code starts here_____
 
@@ -168,8 +195,23 @@ function tdrlocus(reg, varargin)
             denP = varargin{3};
             denD = varargin{4};
         else
-            [numP, numD] = string2matrix(varargin{1});
-            [denP, denD] = string2matrix(varargin{2});
+            params = regexp(strcat(varargin{1}, '_', varargin{2}), 'K\d+', 'match');
+
+            if isempty(params)
+                paramInfo = dictionary();
+                paramNum = '';
+                paramDen = '';
+                [numP, numD] = string2matrix(varargin{1});
+                [denP, denD] = string2matrix(varargin{2});
+            else
+                saveAndSetParams(params)
+                paramNum = char(varargin{1});
+                paramDen = char(varargin{2});
+                num = substituteParams(paramNum);
+                den = substituteParams(paramDen);
+                [numP, numD] = string2matrix(num);
+                [denP, denD] = string2matrix(den);
+            end
         end
         
         % Create matrix for denominator + K*numerator
@@ -180,6 +222,7 @@ function tdrlocus(reg, varargin)
         olZeros = compute_roots(reg, numP, D, ds);
         olPoles = compute_roots(reg, denP, D, ds);
         clPoles = compute_roots(reg, P, D, ds);
+        maxStep = reg(4)/(10*(length(olPoles) + length(olZeros)));
         getAdditionalInfo
     end
 
@@ -196,7 +239,7 @@ function tdrlocus(reg, varargin)
 
         % Draw root locus
         lines = draw_rl_lines(reg, 1e10, olZeros, olPoles, numP, denP, D,...
-            numdP, dendP, ds, minsStep, maxsStep);
+            numdP, dendP, ds, minsStep, maxStep);
         numLines = length(lines);
         rlocusLines = cell(2*numLines, 1);
         for i = 1:numLines
@@ -209,6 +252,23 @@ function tdrlocus(reg, varargin)
         drawPolesZeros
     end
 
+    function saveAndSetParams(params)
+        
+        % if all(isKey(paramInfo))
+        if paramInfo.numEntries == 0
+            paramInfo(params) = ones(1, length(params));  
+        elseif ~all(isKey(paramInfo, params)) % Add new, remove old, keep these param from params that are already in paramInfo
+            newParams = params(~isKey(paramInfo, params));
+            allKeys = paramInfo.keys;
+            oldKeys = allKeys(~ismember(allKeys, params));
+            paramInfo = paramInfo.remove(oldKeys);
+            paramInfo(newParams) = ones(1, length(newParams));
+        end
+    end
+
+    function subStr = substituteParams(parStr)
+        subStr = replace(parStr, paramInfo.keys, string(paramInfo(paramInfo.keys)));
+    end
 
 function updateCLPoles
 % Draw all the poles of closed loop system corresponding to given gain
@@ -265,10 +325,19 @@ end
 
 function redraw(varargin)
     clearCanvas
-    newNum = varargin{1};
-    newDen = varargin{2};
-    setCurrentSystem(newNum, newDen);
-    drawRL;
+    if isnumeric(varargin{1}) % Matrix notation
+        newNumP = varargin{1};
+        newNumD = varargin{3};
+        newDenP = varargin{2};
+        newDenD = varargin{3};
+        setCurrentSystem(newNumP, newNumD, newDenP, newDenD);
+    else % string notation
+        newNum = varargin{1};
+        newDen = varargin{2};
+        setCurrentSystem(newNum, newDen);
+    end
+   
+    drawRL
 end
 
 % Clears complex plane
@@ -319,7 +388,7 @@ function openTDTFPopupCallback(~, ~)
     hDenEditField.Value = strden;
 
     function generateNewTDRL(~, ~)
-        redraw(hNumEditField.Value, hDenEditField.Value);
+        redraw(string(hNumEditField.Value), string(hDenEditField.Value));
         close(hTDTFPopupFig);
     end
 
@@ -370,12 +439,12 @@ end
 
 % Gain slider callback (update after slider movement stopped)
 function sliderMovement(~, event)
-    val = event.Value^10;
+    val = 10^event.Value;
     dK = val - gainEdit.Value;
     
     %clPoles = compute_roots(reg, denP+event.Value*numP, D, ds);
     newPoles = iterate_root(clPoles, numP, denP, D, dendP, numdP, ds, gainEdit.Value, dK);
-    if max(abs(newPoles - clPoles)) > maxsStep
+    if max(abs(newPoles - clPoles)) > maxStep
         clPoles = compute_roots(reg, denP+val*numP, D, ds);
     else
         clPoles = newPoles;
@@ -387,7 +456,7 @@ end
 
 % Gain slider callback (update after slider movement stopped)
 function sliderMoved(~, event)
-    val = event.Value^10;
+    val = 10^event.Value;
     P = denP+val*numP;
     clPoles = compute_roots(reg, P, D, ds);
     gainEdit.Value = val;
@@ -399,12 +468,64 @@ function editGain(src, ~)
     %dK = src.Value - gainEdit.Value;
     clPoles = compute_roots(reg, denP+src.Value*numP, D, ds);
     %clPoles = [poles, conj(poles)];
-    gainSlider.Value = log10(src.Value);
+    if src.Value < minSliderLim
+        gainSlider.Value = log10(minSliderLim);
+    else
+        gainSlider.Value = log10(src.Value);
+    end
     updateCLPoles;
 end
 
+% Slider window callback
+function openSliderWindow(~, ~)
+    numSliders = paramInfo.numEntries;
+    textWidth = max(length(paramNum), length(paramDen))*7;
+    
+    hSliderFig = uifigure(Name='Slider Window', ...
+            Position=[500, 300, textWidth+100, numSliders*60+100]);
+    
+    hNumText = uilabel(hSliderFig, Position=[50, numSliders*60+70, textWidth, 20], Text=paramNum, ...
+            FontSize=14, HorizontalAlignment="right");
+    hLineText = uilabel(hSliderFig, Position=[50, numSliders*60+62, textWidth, 20], Text=repmat('_', 1, textWidth/7), ...
+        FontSize=14, HorizontalAlignment="right");
+    hLineText.WordWrap = 'on';
+    hDenText = uilabel(hSliderFig, Position=[50, numSliders*60+45, textWidth, 20], Text=paramDen, ...
+            FontSize=14, HorizontalAlignment="right");
+
+    paramEdits = cell(0);
+    paramSliders = cell(0);
+    
+    if paramInfo.numEntries > 0
+        keys = paramInfo.keys;
+        for i = 1:length(keys)
+            paramKey = keys(i);
+            uilabel(hSliderFig, Text=paramKey, ...
+                Position=[20, numSliders*60-(i-1)*50-20, 120, 20]);
+        
+             paramEdits{i} = uieditfield(hSliderFig, 'numeric', Value=paramInfo(paramKey), ...
+                 Position=[60, numSliders*60-(i-1)*50-20, 80, 20], Tag=paramKey, ...
+                 ValueChangedFcn=@editParamValue);
+        
+             % Create the slider
+             paramSliders{i} = uislider(hSliderFig, Position=[160, numSliders*60-(i-1)*50, 200, 3], ...
+                 Limits=[-10 10], Value=paramInfo(paramKey), ... 
+                 Tag=paramKey, ValueChangedFcn=@editParamValue); % Tag the slider for future reference
+        end
+    end
+
+    function editParamValue(src, ~)
+        parKey = src.Tag;
+        paramInfo(parKey) = src.Value;
+    
+        redraw(paramNum, paramDen);
+    end
+end
+
 % Enable changing gain by dragging
-function moveOn(~, ~)
+function moveOn(src, ~)
+    toggleOffOthers(src, hPoleSelect, hPolesSelect, ...
+            hZeroSelect, hZerosSelect, ...
+            hZoomOutBtn, hZoomInBtn, hPanBtn);
     set(hFig, "Pointer", "custom", "PointerShapeCData", moveCursorMat, "PointerShapeHotSpot", [10, 9]);
     movePoles= true;
 end
@@ -416,8 +537,43 @@ function moveOff(~, ~)
 end
 
 function mousePushed(~, ~)
-    movingPolesNow = true;
-    if movePoles
+    addingPZ = (hPoleSelect.State == "on") | (hPolesSelect.State == "on") ...
+        | (hZeroSelect.State == "on") | (hZerosSelect.State == "on");
+    if addingPZ
+        cp = get(hAx, 'CurrentPoint');
+        x = cp(1,1);
+        y = cp(1,2);
+        newDen = 1;
+        newNum = 1;
+        if selectedMode == "RealPole"
+            newDen = poly(x);
+        elseif selectedMode == "ImagPole"
+            newDen = poly([x+y*1i, x-y*1i]);
+        elseif selectedMode == "RealZero"
+            newNum = poly(x);
+        elseif selectedMode == "ImagZero"
+            newNum = poly([x+y*1i, x-y*1i]);
+        end
+        
+        orderNum = size(numP, 2) + size(newNum, 2) - 1;
+        orderDen = size(denP, 2) + size(newDen, 2) - 1;
+
+        if max([orderNum, orderDen]) < 6
+            convNum = zeros(size(D, 1), orderNum);
+            convDen = zeros(size(D, 1), orderDen);
+            for i = 1:size(numP, 1)
+                convNum(i, :) = conv(numP(i,:), newNum);
+            end
+            for i = 1:size(denP, 1)
+                convDen(i, :) = conv(denP(i,:), newDen);
+            end
+            
+            
+            redraw(convNum, convDen, D);
+        end
+        
+    elseif movePoles
+        movingPolesNow = true;
         set(hFig, 'WindowButtonMotionFcn', @holdAndChangeGain);
     end
 end
@@ -456,7 +612,13 @@ function holdAndChangeGain(~, ~)
         currP = denP + K*numP;
         clPoles = compute_roots(reg, currP, D, ds);
         %clPoles = iterate_root(clPoles, numP, denP, D, dendP, numdP, K0, dK, 0.01, 0.1);
+
         gainEdit.Value = K;
+        if K < minSliderLim
+            gainSlider.Value = log10(minSliderLim);
+        else
+            gainSlider.Value = log10(K);
+        end
         updateCLPoles
         pause(0.1)
     end
@@ -471,10 +633,19 @@ function toggleOffOthers(src, varargin)
     end
 end
 
+% Toggle pole/zero adding mode callback
+function toggleModeSelect(src, varargin)
+    toggleOffOthers(src, varargin{:});
+    idx = str2num(src.Tag);
+    selectedMode = selectionModes{idx};
+end
+
 % ------------------------- Pan/Zoom-----------------------------
 % Pan on callback
 function panOn(src, ~)
-    toggleOffOthers(src, hZoomInBtn, hZoomOutBtn);
+    toggleOffOthers(src, hPoleSelect, hPolesSelect, ...
+            hZeroSelect, hZerosSelect, ...
+            hMovePoles, hZoomInBtn, hZoomOutBtn);
     pan(hAx.Parent, 'on');
 end
 
@@ -485,7 +656,9 @@ end
 
 % Zoom in enabled callback
 function zoomInOn(src, ~)
-    toggleOffOthers(src, hPanBtn, hZoomOutBtn);
+    toggleOffOthers(src, hPoleSelect, hPolesSelect, ...
+            hZeroSelect, hZerosSelect, ...
+            hMovePoles, hPanBtn, hZoomOutBtn);
     z = zoom(hAx);
     z.Direction = "in";
     z.Enable = "on";
@@ -500,7 +673,9 @@ end
 
 % Zoom out enabled callback
 function zoomOutOn(src, ~)
-    toggleOffOthers(src, hZoomInBtn, hPanBtn);
+    toggleOffOthers(src, hPoleSelect, hPolesSelect, ...
+            hZeroSelect, hZerosSelect, ...
+            hMovePoles, hZoomInBtn, hPanBtn);
     z = zoom(hAx);
     z.Direction = "out";
     z.Enable = "on";
