@@ -70,4 +70,9 @@ Each row in P matrix, i = 1,...,N is specific for given delay and each column j 
 
 ### Working in GUI
 
-Most of the window is covered by complex plane with drawn root locus. It is possible to change gain 
+Most of the window is covered by complex plane with drawn root locus. It is possible to change gain using slider in the bottom of the figure. You can also change gain by directly editing value in bottom window. By clicking "Toggle pole direction" you can visualize pole movement direction for increasing gain (K value).
+
+### Toolbar tools
+Going from left to right, there are following tools:
+
+#### Edit transfer function
