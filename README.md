@@ -14,9 +14,9 @@ Arguments numerator and denominator must be string values written in form of "(p
 Arguments numP, numD, denP, denD must be matrix notations of quasipolynomial. The P matrix represents coefficients of polynomials: P = [b11, b12, ..., b1n; ...; bN1, ... bNn], where each row k = 1,...,N is specific for given delay and each column l = 1,...,n specifies coefficient for given order of monomial. Coefficient l = 1 is tied to s^(n-1), ... l = n is coefficient of a constant. "num" and "den" specifies numerator or denominator quasipolynomial. Numerator and denominator matrices may not have same delays.
 
 $$
-A =
+P =
 \begin{bmatrix}
-a & b \\
+\beta_\mathrm{11} & b \\
 c & d
 \end{bmatrix}
 $$
