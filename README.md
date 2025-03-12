@@ -16,8 +16,9 @@ Arguments numP, numD, denP, denD must be matrix notations of quasipolynomial. Th
 $$
 P =
 \begin{bmatrix}
-\beta_\mathrm{11} & \beta_\mathrm{12} & ... & \beta_\mathrm{1n} \\
-\hdot & & & \hdot \\
+\beta_\mathrm{11} & \beta_\mathrm{12} & \cdots & \beta_\mathrm{1n} \\
+\beta_\mathrm{21} & \ddots & & \vdots \\
+\vdots & & & \vdots \\
 \beta_\mathrm{N1} & ... & ... & \beta_\mathrm{Nn}
 \end{bmatrix}
 $$
