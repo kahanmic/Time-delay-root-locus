@@ -75,7 +75,7 @@ Most of the window is covered by complex plane with drawn root locus. It is poss
 ### Toolbar tools
 Going from left to right, there are following functions:
 
-#### Edit transfer function ![Alt Text](images/fraction2_icon.png)
+#### ![Alt Text](images/fraction2_icon.png) Edit transfer function 
 You can change transfer function of the system directly in GUI, either by writing numerator and denominator directly in the string notation to corresponding windows or by loading numerator and denominator matrices from workspace.
 
 #### Changing parametric values ![Alt Text](images/var_param_icon.png)
