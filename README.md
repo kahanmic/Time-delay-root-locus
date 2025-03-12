@@ -75,41 +75,41 @@ Most of the window is covered by complex plane with drawn root locus. It is poss
 ### Toolbar tools
 Going from left to right, there are following functions:
 
-#### ![Alt Text](images/fraction2_icon.png) Edit transfer function 
+#### ![Edit transfer function](images/fraction2_icon.png) Edit transfer function 
 You can change transfer function of the system directly in GUI, either by writing numerator and denominator directly in the string notation to corresponding windows or by loading numerator and denominator matrices from workspace.
 
-#### Changing parametric values ![Alt Text](images/var_param_icon.png)
+#### ![Changing parametric values](images/var_param_icon.png) Changing parametric values 
 Numerical values can be substituted by parametric notation in a form of "K...", where "..." represents any integer value ("K1", "K24" etc.). Each parametric value is initiated to value = 1. By clicking second leftmost button on the toolbar, you can easily change those values inside GUI without rewriting whole transfer function. This can be useful, for example, for easy time delay editing.
 
-#### Changing gain by dragging poles ![Alt Text](images/move_poles_icon.png)
+#### ![Changing gain by dragging poles](images/move_poles_icon.png) Changing gain by dragging poles 
 When this function turned on, you can move poles, thus changing gain, by holding and moving poles on a complex plane.
 
-#### Select plot region ![Alt Text](images/region_icon_16px.png)
+#### ![Select plot region](images/region_icon_16px.png) Select plot region 
 This function opens popup figure, where drawn region can be changed inside the GUI.
 
-#### Auto adjust plot region ![Alt Text](images/region_auto_icon_18px.png)
+#### ![Auto adjust plot region](images/region_auto_icon_18px.png) Auto adjust plot region 
 This button changes drawn region to fit current section on complex plane.
 
-#### Add real pole ![Alt Text](images/pole_icon.png)
+#### ![Add real pole](images/pole_icon.png) Add real pole 
 Adds real pole to the system by clicking on complex plane.
 
-#### Add imaginary poles ![Alt Text](images/poles_icon.png)
+#### ![Add imaginary poles](images/poles_icon.png) Add imaginary poles 
 Adds two complex conjurates imaginary poles by clicking on complex plane.
 
-#### Add real zero ![Alt Text](images/zero_icon.png)
+#### ![Add real zero](images/zero_icon.png) Add real zero 
 Adds real zero to the system by clicking on complex plane.
 
-#### Add imaginary zeros ![Alt Text](images/zeros_icon.png)
+#### ![Add imaginary zeros](images/zeros_icon.png) Add imaginary zeros 
 Adds two complex conjurates imaginary zeros by clicking on complex plane.
 
-#### Pan function ![Alt Text](images/pan_icon.png)
+#### ![Pan function](images/pan_icon.png) Pan function 
 This function enables/disables pan tool.
 
-#### Zoom in function ![Alt Text](images/zoom_in_icon.png)
+#### ![Zoom in function](images/zoom_in_icon.png) Zoom in function 
 This function enables/disables zoom in function.
 
-#### Zoom out function ![Alt Text](images/zoom_out_icon.png)
+#### ![Zoom out function](images/zoom_out_icon.png) Zoom out function 
 This function enables/disables zoom out function.
 
-#### Undo button ![Alt Text](images/undo_icon.png)
+#### ![Undo button](images/undo_icon.png) Undo button 
 This button takes user back to previous state on complex plane.
