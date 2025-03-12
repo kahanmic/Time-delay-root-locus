@@ -15,7 +15,7 @@ $$ H(s) = \frac{h_\mathrm{num}(s)}{h_\mathrm{den}(s)} $$
 
 where $h_\mathrm{num}(s)$ and $h_\mathrm{den}(s)$ represent quasipolynomials
 
-$$ h_\mathrm{num}(s) = \sum^{N_\mathrm{num}}_{i=1} p_\mathrm{i} e^{-\alpha_\mathrm{i}s}$$
+$$ h_\mathrm{num}(s) = \sum^{N_\mathrm{num}}_{i=1} p_\mathrm{i} e^{-\alpha_\mathrm{i}s} $$
 
 The tool is callable by tdrlocus().
 It can be called without any arguments, the clear workspace is then opened and region for computing open loop poles and zeroes is automatically set to Re = [-10,5] and Im = [0, 50]. If you want to draw the root locus for given system when calling the function, it must be in from of: tdrlocus(reg, numerator, denominator) or tdrlocus(reg, numP, numD, denP, denD). 
