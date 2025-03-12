@@ -19,6 +19,12 @@ $$
 h(s) = \sum_{i=1}^{N} p_\mathrm{i} e^{-\alpha_\mathrm{i}s}
 $$
 
+where
+
+$$
+p_\mathrm{i}(s) = \sum_{j=1}^{n} \beta_\mathrm{j} s^{n-j}
+$$
+
 The tool is callable by tdrlocus().
 It can be called without any arguments, the clear workspace is then opened and region for computing open loop poles and zeroes is automatically set to Re = [-10,5] and Im = [0, 50]. If you want to draw the root locus for given system when calling the function, it must be in from of: tdrlocus(reg, numerator, denominator) or tdrlocus(reg, numP, numD, denP, denD). 
 
