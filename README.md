@@ -13,10 +13,10 @@ This tool is able to draw root locus of time delay systems
 
 $$ H(s) = \frac{h_\mathrm{num}(s)}{h_\mathrm{den}(s)} $$
 
-where $h_\mathrm{num}(s)$ and $h_\mathrm{den}(s)$ represent quasipolynomials
+where $h_\mathrm{num}(s)$ and $h_\mathrm{den}(s)$ represent quasipolynomials in form of
 
 $$ 
-h(s) = \sum p_\mathrm{i} e^{-\alpha_\mathrm{i}s}
+h(s) = \sum^{N} p_\mathrm{i} e^{-\alpha_\mathrm{i}s}
 $$
 
 The tool is callable by tdrlocus().
