@@ -22,7 +22,7 @@ $$
 where
 
 $$
-p_\mathrm{i}(s) = \sum_{j=1}^{n} \beta_\mathrm{j} s^{n-j}
+p_\mathrm{i}(s) = \sum_{j=1}^{n} \beta_\mathrm{ij} s^{n-j}
 $$
 
 The tool is callable by tdrlocus().
