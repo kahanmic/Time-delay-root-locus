@@ -16,7 +16,7 @@ $$ H(s) = \frac{h_\mathrm{num}(s)}{h_\mathrm{den}(s)} $$
 where $h_\mathrm{num}(s)$ and $h_\mathrm{den}(s)$ represent quasipolynomials in form of
 
 $$ 
-h(s) = \sum^{N} p_\mathrm{i} e^{-\alpha_\mathrm{i}s}
+h(s) = \sum^{N}_{i=1} p_\mathrm{i} e^{-\alpha_\mathrm{i}s}
 $$
 
 The tool is callable by tdrlocus().
