@@ -1,114 +1,91 @@
 function tdrlocus(Reg, varargin)
-% Time delay root locus
+% tdrlocus v2
+% numerator = "1+0.1.*exp(-s)"; denominator = "2.*s+exp(-s)"; Reg = [-10 5 0 50];
+% tdrlocus(Reg, numerator, denominator)
+% denominator = "2.*s+exp(-s)"
+% numP = [1; 0.0183]; numD = [0; 1]; denP = [2 0; 0 1]; denD = [0; 1];
+% tdrlocus(Reg, "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)") 
 %
-% tdrlocus()
-%   
-%   Opens Time delay root locus GUI without initial root locus
-%
-% tdrlocus(Reg, Num, Den)
-%
-%   Opens GUI with time delay root locus of transfer function with
-%   numerator 'Num' and denominator 'Den' within specified region 'Reg'
-%
-%   Reg - region on complex plane where root locus is being plotted
-%         Reg = [real_min real_max imag_min imag_max]
-%         Reg = 0 to select pre-defined region [-10 5 -100 100]
-%   Num - numerator of the transfer function written as string
-%         For example: Num = "1+exp(-s-4)"
-%   Den - denominator of the transfer function written as string
-%         For example: Den = "2.*s+exp(-s)"
-%
-%   Numerator and denominator can be written with parameters as 
-%   capital letters, adjustable through GUI
-%   For example: Den = "K.*s+exp(-L.*s+M)"
-%
-% Created by Michael Kahanek, CTU in Prague
-% Using QPmR algorithm created by Tomas Vyhlidal, CTU in Prague
-% http://www.cak.fs.cvut.cz/algorithms/qpmr
 
-    %% GUI variables
-    
-    %fileID = fopen("testtxt.txt", "w");    % Bug fixing
+    %% Add path to functions
+    addpath(fullfile(pwd, 'functions'));
 
-    % Create user adjusted window
-    screenSize = get(groot, 'ScreenSize');  % Get user's screen size
+    %% GUI Variables
+
+    % GUI window setup
+    screenSize = get(groot, 'ScreenSize');  
     figSize = [round(screenSize(3)*0.7), round(screenSize(4)*0.7)];
     figColor = [0.9 0.9 0.9];
     axesColor = [1 1 1];
-
-    if nargin > 0
-        if length(Reg) > 1
-            xLimits = [Reg(1) Reg(2)];
-            yLimits = [Reg(3) Reg(4)];
-        else
-            xLimits = [-5 5];
-            yLimits = [-5 5];
-        end
-    else
-        xLimits = [-5 5];
-        yLimits = [-5 5];
-    end
     figPosition = [(screenSize(3:4) - figSize)/2, figSize];
-    
-    % Hex colors of
+
+    % Colors setup
     OLPoleCol = "#FDA6A6"; % Open loop poles
     OLZeroCol = "#8299F6"; % Open loop zeros
     RLLineCol = "#1fdda5"; % Root locus lines
-    defaultReg = [-10 5 -50 50];  % Default region of time delay root locus if not specified
 
+    reg = [-10 5 0 50];  % Default region of time delay root locus if not specified
+    
     %% Variables
-    
-    % Setup default region if nor specified or function is called w/o
-    % arguments
-    if nargin == 0
-        Reg = defaultReg;
-    end
-    
-    % numerator and denominator of tf (delay and non-delay)
-    paramNum = '';
-    paramDen = '';
-    denominator = '1';    
-    numerator = '1';
-    
     % Plot data
     rlocusLines = {};  % Data of plotted root locus lines
+    poleDirections = {};
     plotPoles = [];
     plotZeros = [];
     plotCLPoles = [];
-    
-    % Transfer function text
-    tfText = '';
-    paramTfText = '';
 
-    % Variables for time-delay tf with parameters and their values
-    TDTFparameters = {};
-    paramValues = [];   % scalar values
-    paramEdits = {}; % uieditfields
-    paramSliders = {}; % uisliders
+    % ___System data___
+    % Matrix notation of numerator and denominator quasipolynomial
+    numP = 1;
+    denP = 1;
+    numdP = 0;
+    dendP = 0;
 
-    samples = 400;  % Precision of root locus lines
+    % Parameters
+    paramInfo = dictionary();
+    paramNum = '';
+    paramDen = '';
 
-    % Gain limits (logarithmic)
-    minLogLim = -5;
-    maxLogLim = 10;
-    %minLinLim = 10e-4;
-    %maxLinLim = 10e4;
-    
+    % Matrix notation of: denominator + K*numerator
+    P = 2;  % num+K*den
+    D = 0;  % Delay matrix
+
+    % Calculated poles of closed loop system for given gain (or poles/zeros of open loop system)
+    clPoles = [];
+    olPoles = [];
+    olZeros = [];
+
+    % Precision data
+    ds = 0.1;   % Precision of grid
+    maxStep = 0.5; % Max and min shift of poles for gain change
+    minsStep = 0.01;
+    currGain = 1; % Initial gain
+
     % Limits of gain on slider
-    minSliderLim = 0;
-    maxSliderLim = 100;
-    
+    minSliderLim = 1e-4;
+    maxSliderLim = 1e8;
+
     % Modes for adding poles and zeros by clicking
     selectionModes = {'RealPole', 'ImagPole', 'RealZero', 'ImagZero'};
     selectedMode = selectionModes{1};
-    s = tf('s');
+    
+    % Logical variables
+    movePoles = false;  % Bool for changing gain by moving poles mode
+    movingPolesNow = false; % Bool that indicates if poles are moving
+    
+    % Region setup
+    if nargin > 0
+        reg = Reg;
+        reg(3) = max([reg(3), 0]);
+    end
+    xLimits = [reg(1) reg(2)];
+    yLimits = [reg(3) reg(4)];
 
-    %% Icon setup
-
+    %% Icon for toolbar setup
     % Undo button icon
     [img, ~, alpha] = imread('./images/undo_icon.png');
     undoIcon = setWhiteBackground(img, alpha);
-    
+
     % Pan button icon 
     [img, ~, alpha] = imread('./images/pan_icon.png');
     panIcon = setWhiteBackground(img, alpha);
@@ -120,7 +97,7 @@ function tdrlocus(Reg, varargin)
     % Zoom out icon
     [img, ~, alpha] = imread('./images/zoom_out_icon.png');
     zoomOutIcon = setWhiteBackground(img, alpha);
-
+    
     poleIcon = imread('./images/pole_icon.png');    % Single pole icon
     polesIcon = imread('./images/poles_icon.png');  % Double pole icon
     zeroIcon = imread('./images/zero_icon.png');    % Single zero icon
@@ -129,29 +106,40 @@ function tdrlocus(Reg, varargin)
     regAutoIcon = imread('./images/region_auto_icon_18px.png'); % Auto region icon
     loadIconTDTF = imread('./images/fraction2_icon.png');   % Time delay tf icon
     varParamIcon = imread('./images/var_param_icon.png');   % Parameter slider icon
+    movePolesIcon = imread('./images/move_poles_icon.png'); % Gain change by dragging icon
 
-    %% GUI setup
+    %% GUI Setup
 
-    % --- Figure setup ---
+    % Figure
     hFig = uifigure(Position=figPosition, Name='Time delay Root Locus', ...
        Color=figColor);
-    myLayout = uigridlayout(hFig, RowHeight={'4x', '16x', '1x', '1x'}, ...
-        ColumnWidth={'2x', '4x', '3x', '12x', '1x'}, BackgroundColor=figColor);
+    hFig.WindowButtonDownFcn = @mousePushed;
+    hFig.WindowButtonUpFcn = @mouseReleased;
 
-    % --- Toolbar setup ---
+    myLayout = uigridlayout(hFig, RowHeight={'4x', '16x', '1x', '1x'}, ...
+        ColumnWidth={'3x', '3x', '3x', '12x', '1x'}, BackgroundColor=figColor);
+
+    % _____________________Toolbar_____________________
+
     hToolbar = uitoolbar(hFig, BackgroundColor=[1 1 1]);
-    
-    % Toolbar button (edit time delay transfer function)
+
     hTBSelectTDTF = uipushtool(hToolbar, CData=loadIconTDTF, ...
         Tooltip='Edit time delay transfer function', ...
         ClickedCallback=@openTDTFPopupCallback);
+
     hVarParam = uipushtool(hToolbar, CData=varParamIcon, ...
         Tooltip='Change parameters for time delay transfer function', ...
         ClickedCallback=@openSliderWindow);
-    hRegSelect = uipushtool(hToolbar, CData=regIcon, Tooltip='Select plot region', ...
-        ClickedCallback=@openRegPopupCallback);
-    hRegAuto = uipushtool(hToolbar, CData=regAutoIcon, Tooltip='Auto-adjust plot region');
-    
+
+    hMovePoles = uitoggletool(hToolbar, CData=movePolesIcon, ...
+        Tooltip='Change pole gain', OnCallback=@moveOn, OffCallback=@moveOff);
+
+    hRegSelect = uipushtool(hToolbar, CData=regIcon, ...
+        Tooltip='Select plot region', ClickedCallback=@openRegPopupCallback);
+
+    hRegAuto = uipushtool(hToolbar, CData=regAutoIcon, ...
+        Tooltip='Auto-adjust plot region');
+
     % Manual pole/zero selection
     hPoleSelect = uitoggletool(hToolbar, CData=poleIcon, Tooltip='Add real pole', Separator='on', Tag='1');
     hPolesSelect = uitoggletool(hToolbar, CData=polesIcon, Tooltip='Add imaginary pole', Tag='2');
@@ -163,562 +151,706 @@ function tdrlocus(Reg, varargin)
     hZoomInBtn = uitoggletool(hToolbar, CData=zoomInIcon, OnCallback=@zoomInOn, OffCallback=@zoomInOff);
     hZoomOutBtn = uitoggletool(hToolbar, CData=zoomOutIcon, OnCallback=@zoomOutOn, OffCallback=@zoomOutOff);
 
-    
     % Shifting undo icon to the right hand side
     spacerIcon = NaN(16, 16, 3); % A completely transparent image
     uipushtool(hToolbar, CData=spacerIcon, Enable='off', Separator='on');
-    for empty = 1:round((figSize(1)- 11*28 - 3*5)/28)
+    for empty = 1:round((figSize(1)- 12*28 - 3*5)/28)
         uipushtool(hToolbar, CData=spacerIcon, Enable='off', Separator='off');
     end
     
-    % Toolbar undo button
+    % Undo button
     hUndo = uipushtool(hToolbar, CData=undoIcon, TooltipString='Undo', ...
         ClickedCallback=@doUndo);
 
-    % --- Axes setup ---
-    hAx = uiaxes(myLayout, Color=axesColor);
+    % _____________________Toolbar end_____________________
+
+    % Plot axes
+    hAx = uiaxes(myLayout, Color=axesColor, Box="on", XGrid="on", YGrid="on", ...
+        XLim=xLimits, YLim=yLimits);
     hAx.Layout.Column = [1 5];
     hAx.Layout.Row = [1 2];
-    hAx.Box = 'on';
-    hAx.XLim = xLimits;
-    hAx.YLim = yLimits;
-    hAx.XGrid = 'on';
-    hAx.YGrid = 'on';
     hAx.XLabel.String = 'Real part';
     hAx.YLabel.String = 'Imaginary part';
     hAx.Toolbar.Visible = 'off';
     hold(hAx, 'on');
-    
-    % Gain slider
-    gainSlider = uislider(myLayout, Value=1);
-    gainSlider.Limits = [minSliderLim, maxSliderLim];
+
+    % Axis for real = 0 and imag = 0
+    hXAxis = plot(hAx, xLimits, [0 0], ':k', 'LineWidth', 1, Tag='axes');
+    hYAxis = plot(hAx, [0 0], yLimits, ':k', 'LineWidth', 1, Tag='axes');
+
+    % Gain slider (logarithmic scale)
+    gainSlider = uislider(myLayout, Value=log10(currGain));
+    gainSlider.Limits = [log10(minSliderLim), log10(maxSliderLim)];
+    gainSlider.MajorTicks = linspace(log10(minSliderLim), log10(maxSliderLim), 11);
     gainSlider.Layout.Column = [3 4];
     gainSlider.Layout.Row = [3 4];
 
-    % Gain limit edit
-    hGainUp = uibutton(myLayout, Icon='./images/arrow_up.png', Text='', ...
-        ButtonPushedFcn=@buttonUp, Tooltip='Higher gain limit');
-    hGainUp.Layout.Column = 5;
-    hGainUp.Layout.Row = 3;
-    hGainDown = uibutton(myLayout, Icon='./images/arrow_down.png', Text='', ...
-        ButtonPushedFcn=@buttonDown, Tooltip='Lower gain limit');
-    hGainDown.Layout.Column = 5;
-    hGainDown.Layout.Row = 4;
-
-    % Gain text
-    gainLabel = uilabel(myLayout, Text='Gain', HorizontalAlignment='center');
-    gainLabel.Layout.Column = 2;
-    gainLabel.Layout.Row = 3;
-
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
-        Limits=[minSliderLim, power(10, maxSliderLim)],...
-        ValueChangedFcn=@editGain, Value=1, HorizontalAlignment='center');
+        Limits=[0, maxSliderLim],...
+        ValueChangedFcn=@editGain, Value=currGain, HorizontalAlignment='center');
     gainEdit.Layout.Column = 2;
     gainEdit.Layout.Row = 4;
     
-    hDiscreteRL = uibutton(myLayout, 'state', Value=1, Text='Discrete RL', ValueChangedFcn=@toggleRLMode);
-    hDiscreteRL.Layout.Column = 1;
-    hDiscreteRL.Layout.Row = 4;
-  
+    % Show pole shift direction for added gain
+    hPoleDir = uicheckbox(myLayout, Value=0, Text='Toggle pole direction', ...
+        ValueChangedFcn=@togglePoleDirection);
+    hPoleDir.Layout.Column = 1;
+    hPoleDir.Layout.Row = 4;
 
-    % Transfer text
-    tfAx = uiaxes(myLayout, Visible='off');
-    %tfAx.Layout.Column = 1;
-    %tfAx.Layout.Row = 1;
-    cla(tfAx);
-    axis(tfAx, 'off');
-    tfAx.Toolbar.Visible = 'off';
+    %% Callbacks
 
-    hTFText = text(hAx, 0.1, 0.5, '', FontSize=20, Interpreter='latex', ...
-                Tag='tftext', Visible='off');
-    
-    hStableText = text(hAx, 0, 0, '');
-    xL = hAx.XLim(2);
-    yL = hAx.YLim(1);
-    hRunningText = text(hAx, 0.99*xL, 0.99*yL , '', FontSize=16, ...
-                HorizontalAlignment='right', VerticalAlignment='bottom', Color=[1 0 0]);
-    
-    % Axis
-    hXAxis = plot(hAx, xLimits, [0 0], ':k', 'LineWidth', 1, Tag='axes');
-    hYAxis = plot(hAx, [0 0], yLimits, ':k', 'LineWidth', 1, Tag='axes');
-    
-    %% Code
+    % Add listeners to update the axis lines when limits change
+    addlistener(hAx, 'XLim', 'PostSet', @(~, ~) updateAxes);
+    addlistener(hAx, 'YLim', 'PostSet', @(~, ~) updateAxes);
+
+    % Redraw Root locus for given region
+    hRegAuto.ClickedCallback = @(src, event)redrawRegion(src, true);
+
+    % Changing Poles with gain
+    gainSlider.ValueChangingFcn = @sliderMovement;
+    gainSlider.ValueChangedFcn = @sliderMoved;
+
+    % Choosing pole/zero adding mode
+    hPoleSelect.OnCallback = @(src, event)toggleModeSelect(src, hPolesSelect, ...
+        hZeroSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
+    hPolesSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
+        hZeroSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
+    hZeroSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
+        hPolesSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
+    hZerosSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
+        hPolesSelect, hZeroSelect, hPanBtn, hZoomInBtn, hZoomOutBtn, hMovePoles);
+
+    %% ____________________ Algorithm start _______________________
 
     % Stack initialization
     undoStack = UndoStack(10);
     helpStack = UndoStack(1);
 
-    % Plotting initialization
     if nargin > 0
-        drawRL(varargin{:});
+        setCurrentSystem(varargin{:});
+        drawRL;
     end
+    
+    % Saves all important info about current system
+    function setCurrentSystem(varargin)
 
-    %% Callbacks
-
-    % Add listeners to update the axis lines when limits change
-    addlistener(hAx, 'XLim', 'PostSet', @(src, evt) updateAxes(hAx, hXAxis, hYAxis));
-    addlistener(hAx, 'YLim', 'PostSet', @(src, evt) updateAxes(hAx, hXAxis, hYAxis));
-    gainSlider.ValueChangingFcn = @sliderMovement;
-    gainSlider.ValueChangedFcn = @sliderMoved;
-    hAx.ButtonDownFcn = @mouseClickCallback;
-    hRegAuto.ClickedCallback = @(src, event)redrawRegion(src, true);
-    hPoleSelect.OnCallback = @(src, event)toggleModeSelect(src, hPolesSelect, ...
-        hZeroSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn);
-    hPolesSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
-        hZeroSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn);
-    hZeroSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
-        hPolesSelect, hZerosSelect, hPanBtn, hZoomInBtn, hZoomOutBtn);
-    hZerosSelect.OnCallback = @(src, event)toggleModeSelect(src, hPoleSelect, ...
-        hPolesSelect, hZeroSelect, hPanBtn, hZoomInBtn, hZoomOutBtn);
-
-    %% Functions
-
-% Draw rootlocus of transfer function
-    function drawRL(varargin)
-        
-        % varargin{1} – numerator, varargin{2} – denominator
-        tmpNum = char(varargin{1});
-        tmpDen = char(varargin{2});
-
-        % Check if parametrically written
-        [isPar, numPar] = hasParam(tmpNum, tmpDen);
-        
-        if isPar
-            % Written text saved
-            paramNum = tmpNum;
-            paramDen = tmpDen;
-            % New parameter values to be set
-            if length(paramValues) ~= numPar
-                paramValues = ones(1, numPar);
-            end
-            setNewParameterEq;
-            updateParameters;   % sets new numerator and denominator
+        % Check for Matrix or string notation
+        if isnumeric(varargin{1})
+            numP = varargin{1};
+            numD = varargin{2};
+            denP = varargin{3};
+            denD = varargin{4};
         else
-            numerator = tmpNum;
-            denominator = tmpDen;
+            params = regexp(strcat(varargin{1}, '_', varargin{2}), 'K\d+', 'match');
+
+            if isempty(params) % Check for parametric notation
+                paramInfo = dictionary();
+                paramNum = '';
+                paramDen = '';
+                [numP, numD] = string2matrix(varargin{1});
+                [denP, denD] = string2matrix(varargin{2});
+            else
+                saveAndSetParams(params)
+                paramNum = char(varargin{1});
+                paramDen = char(varargin{2});
+                num = substituteParams(paramNum);
+                den = substituteParams(paramDen);
+                [numP, numD] = string2matrix(num);
+                [denP, denD] = string2matrix(den);
+            end
         end
         
-        % Plot OL poles if denominator contains 's'
-        if contains(denominator, 's')
-            FunPoles = str2num(strcat('@(s)(', denominator, ')'));
-            delOLPoles = QPmR(Reg, FunPoles, varargin{3:end});
-            plotPoles = plot(hAx, real(delOLPoles), imag(delOLPoles), 'x', ...
+        % Create matrix for denominator + K*numerator
+        [numP, denP, D] = create_rl_matrix(numP, numD, denP, denD);
+        P = denP+currGain*numP;
+        
+        % Compute all poles/zeros of closed/open system
+        olZeros = compute_roots(reg, numP, D, ds);
+        olPoles = compute_roots(reg, denP, D, ds);
+        clPoles = compute_roots(reg, P, D, ds);
+
+        % Adjust max step depending on number of poles/zeros
+        maxStep = reg(4)/(10*(length(olPoles) + length(olZeros)));
+        getAdditionalInfo
+    end
+    
+    % Saves all other not that important info about system
+    function getAdditionalInfo
+        % Get partial derivatives of "s"
+        numdP = derivate_quasipolynomial(numP, D);
+        dendP = derivate_quasipolynomial(denP, D);
+    end
+    
+    % Draw and saves graphical data
+    function drawRL
+        set(hFig, "Pointer", "watch"); % Waiting cursor
+        drawnow
+
+        % Draw root locus
+        lines = draw_rl_lines(reg, 1e10, olZeros, olPoles, numP, denP, D,...
+            numdP, dendP, ds, minsStep, maxStep);
+        numLines = length(lines);
+        rlocusLines = cell(2*numLines, 1);
+        for i = 1:numLines
+            rlocusLines{2*i-1} = plot(hAx, real(lines{i}), imag(lines{i}), ...
+                Color=RLLineCol, Tag='rlocus', LineWidth=1.5);
+            rlocusLines{2*i} = plot(hAx, real(lines{i}), -imag(lines{i}), ...
+                Color=RLLineCol, Tag='rlocus', LineWidth=1.5);
+            reg(1) = min([reg(1), min(real(lines{i}))]);
+            reg(2) = max([reg(2), max(real(lines{i}))]);
+            reg(4) = max([reg(4), max(imag(lines{i}))]);
+        end
+        drawPolesZeros
+        saveToStack(true)
+        set(hFig, "Pointer", "arrow");
+    end
+    
+    % Load new parameters and assign values to them (1 by default)
+    function saveAndSetParams(params)
+        if paramInfo.numEntries == 0
+            paramInfo(params) = ones(1, length(params));  
+        elseif ~all(isKey(paramInfo, params)) % Add new, remove old, keep these param from params that are already in paramInfo
+            newParams = params(~isKey(paramInfo, params));
+            allKeys = paramInfo.keys;
+            oldKeys = allKeys(~ismember(allKeys, params));
+            paramInfo = paramInfo.remove(oldKeys);
+            paramInfo(newParams) = ones(1, length(newParams));
+        end
+    end
+    
+    % Substitute values to parameters
+    function subStr = substituteParams(parStr)
+        subStr = replace(parStr, paramInfo.keys, string(paramInfo(paramInfo.keys)));
+    end
+    
+    % Draw all the poles of closed loop system corresponding to given gain
+    function updateCLPoles
+        plotCLPoles.XData = [real(clPoles), real(clPoles)];
+        plotCLPoles.YData = [imag(clPoles), -imag(clPoles)];
+        
+        % Direction arrows
+        if hPoleDir.Value
+            updatePoleDirection
+        end
+    end
+    
+    % Draw poles and zeros of open loop system
+    function drawPolesZeros
+        plotPoles = plot(hAx, [real(olPoles), real(olPoles)], [imag(olPoles), -imag(olPoles)], 'x', ...
                 MarkerFaceColor=OLPoleCol, MarkerEdgeColor=OLPoleCol, ...
                 MarkerSize=10, LineWidth=1.5, Tag='olpole');
-        else
-            plotPoles = [];
-        end
-        
-        % Plot OL zeros if numerator contains 's'
-        if contains(numerator, 's')
-            FunZeros = str2num(strcat('@(s)(', numerator, ')'));
-            delOLZeros = QPmR(Reg, FunZeros, varargin{3:end});
-            plotZeros = plot(hAx, real(delOLZeros), imag(delOLZeros), 'o', ...
+        plotZeros = plot(hAx, [real(olZeros), real(olZeros)], [imag(olZeros), -imag(olZeros)], 'o', ...
                 MarkerEdgeColor=OLZeroCol, MarkerSize=10, LineWidth=1.5, ...
                 Tag='olzero');
-        else 
-            plotZeros = [];
-        end
-        
-        % Plot root locus
-        
-        if contains(numerator, 's') || contains(denominator, 's')
-            % Calculate poles for different gains
-            delPoles = []; % M x N matrix of M poles (rows) and N gains (columns)
-            %delGain = linspace(minLinLim, maxLinLim, samples);
-            delGain = logspace(minLogLim, maxLogLim, samples);
-            discreteRL = hDiscreteRL.Value;
-            
-            for K = delGain
-                funStr = strcat('@(s)(', denominator, '+', num2str(K),'.*','(' ,numerator, ')', ')');
-                Fun = str2num(funStr);
-                if width(delPoles) > 0
-                    if discreteRL
-                        delPoles = [delPoles; QPmR(Reg, Fun, varargin{3:end})];
-                    else
-                        delPoles = enlargePoleMatrix(delPoles, QPmR(Reg, Fun, varargin{3:end}));
-                    end
-                else
-                    delPoles = QPmR(Reg, Fun, varargin{3:end});
-                end
-            end
-            
-            % Plot root locus, each row corresponds to line in root
-            % locus
-            if discreteRL
-                rlocusLines = {plot(hAx, real(delPoles), imag(delPoles), ...
-                    LineStyle='none', Marker='.', MarkerFaceColor=RLLineCol, MarkerEdgeColor=RLLineCol)};
-            else
-                rlocusLines = cell([1 height(delPoles)]);
-                for i = 1:height(delPoles)
-                    currRow = delPoles(i,:);
-                    currPoles = currRow(currRow ~= 0); % deletes invalid data
-                    rlocusLines{i} = plot(hAx, real(currPoles), imag(currPoles), Color=RLLineCol, Tag='rlocus', LineWidth=1.5);
-                end
-            end
-        
-            
-            % Initiate CL poles for gain = 1; init for gain = gainEdit.Value
-            cpoleFun = str2num(strcat('@(s)(', denominator, '+', ...
-                num2str(gainEdit.Value),'.*', '(', numerator, ')', ')'));
-            TDCLpoles = QPmR(Reg, cpoleFun, varargin{3:end});
-            plotCLPoles = plot(hAx, real(TDCLpoles), imag(TDCLpoles), ...
+        plotCLPoles = plot(hAx, [real(clPoles), real(clPoles)], [imag(clPoles), -imag(clPoles)], ...
                 'x' ,Tag='clpole', MarkerSize=10, LineWidth=1.5, ...
                 MarkerFaceColor='red', MarkerEdgeColor='red');
-
-            stabilityTest(cpoleFun); % Tests if closed loop is stable
-        else
-            rlocusLines = [];
-            plotCLPoles = [];
-        end
-            
-        % Transfer function text
-        tfText = sprintf('Transfer function \\ $$\\frac{%s}{%s}$$', ...
-            numerator, denominator);
-        hTFText.String = tfText;
-        if isPar
-            paramTfText = sprintf('Transfer function \\ $$\\frac{%s}{%s}$$', ...
-            paramNum, paramDen);
-        else
-            paramTfText = '';
-        end
-
-        axis(hAx, [Reg(1) Reg(2) Reg(3) Reg(4)]);   % adjust plot
-        % Saves for undo
-        if ~isempty(plotPoles)  
-            saveToStack();
-        end
     end
     
-% Move CL poles by changing gain
-% newGain: int -> new gain value
-% addToStack: bool -> if saving to stack wanted
-    function updateCLPoles(newGain, addToStack)
-        Fun = [];
-        funUpdate = strcat('@(s)(', denominator, '+', num2str(newGain),'.*','(', numerator,')', ')');
-        Fun = str2num(funUpdate);
-        currPoles = QPmR(Reg, Fun, varargin{3:end}); 
-        
-        plotCLPoles.XData = real(currPoles);
-        plotCLPoles.YData = imag(currPoles);
-        
-        % Saves canvas to undo stack
-        if addToStack && ~isempty(rlocusLines)
-            saveToStack();
-            % check stability
-            stabilityTest(Fun);
-        end % if
-    end % function
-    
-% Update pole order for right rootlocus
-    function reassembledVec2 = reassembleVectors(vec1, vec2)
-        % Ensure the input vectors are column vectors
-        vec1 = vec1(:);
-        vec2 = vec2(:);
-        reassembledVec2 = zeros(size(vec1));
-        usedIdx = [];
-
-        % compare previous and current roots
-        for i = 1:length(vec1)
-            idxFound = false;
-            cntr = 1;
-            [~, newIdx] = sort(abs(vec1(i) - vec2));
-            
-            % Preventing duplicating roots while reassambling
-            while ~idxFound  
-                if ismember(newIdx(cntr), usedIdx)
-                    cntr = cntr + 1;
-                else
-                    reassembledVec2(i) = vec2(newIdx(cntr));
-                    usedIdx(end+1) = newIdx(cntr);
-                    idxFound = true;
-                end        
-            end      
-        end 
-    end
-    
-% Adds poles for new gain to rootlocus
-% newVector: vector of N CL poles for new gain of N row and 1 column
-    function newMat = enlargePoleMatrix(oldMat, newVector)
-        % Reorder vector so that negative complex conjurates are first
-        matV = formatVector(oldMat(:,end));
-        newV = formatVector(newVector);
-        hv1 = height(matV);
-        hv2 = height(newV);
-        largerMat = true;
-        
-        if hv1 ~= hv2   % Different computation appearing/disappearing lines
-            tmpMat = [];
-            tmpVec = [];
-
-            if hv1 > hv2
-                lv = matV;
-                sv = newV;
-                largerMat = true;
-            else
-                lv = newV;
-                sv = matV;
-                largerMat = false;
-            end
-            hlv = height(lv);
-            hsv = height(sv);
-            
-            if length(lv(lv ~= 0)) == hsv   % works only for disappearing poles
-                idxs = find(lv); % indexes of non zero values
-                lv2 = lv(lv ~= 0);
-                sv = reassembleVectors(lv2, sv);
-                tmp = zeros(hlv, 1);
-                tmp(idxs) = sv;
-                tmpMat = oldMat;
-                tmpVec = tmp;
-
-            else
-                vdiff = hlv - hsv;
-                bestShiftInd = 0;
-                bestShiftDiff = inf;
-    
-                for i = 0:vdiff   % shift down
-                    currShiftDiff = sum(abs(sv - lv(1+i:hsv+i)));
-                    if currShiftDiff < bestShiftDiff
-                        bestShiftInd = i;
-                        bestShiftDiff = currShiftDiff;
-                    end
-                end
-                    
-                % zeros to be added to the top or the bottom of the vector
-                if largerMat    % Vector enlarged
-                    for i1 = 1:bestShiftInd
-                        tmpVec = [tmpVec;0];
-                    end
-                    for i1 = 1:length(sv)
-                        tmpVec = [tmpVec; sv(i1)];
-                    end
-                    for i1 = 1:(hlv - (hsv + bestShiftInd))
-                        tmpVec = [tmpVec; 0];
-                    end
-                    tmpMat = oldMat;
-                else    % Matrix enlarged
-                    for i1 = 1:bestShiftInd
-                        tmpMat = [tmpMat; zeros(1, width(oldMat))];
-                    end
-                    for i1 = 1:length(sv)
-                        tmpMat = [tmpMat; oldMat(i1, :)];
-                    end
-                    for i1 = 1:(hlv - (hsv + bestShiftInd))
-                        tmpMat = [tmpMat; zeros(1, width(oldMat))];
-                    end
-                end     
-            end
-        else    % New vector and old matrix of same poles
-            tmpMat = oldMat;
-            tmpVec = reassembleVectors(oldMat(:, end), newVector);
-        end
-        newMat = [tmpMat, tmpVec];
-    end
-    
-% Format vector so that negative complex conjurates are before positive
-    function formatedVec = formatVector(vec)
-        if ~isempty(vec)    % Error handling
-            formatedVec = zeros(size(vec));
-            formatedVec(1) = vec(1);
-            for i = 2:length(vec)
-                delta = 1e-3;
-                closeReal = isClose(real(vec(i)), real(vec(i-1)), delta);
-                closeImag = isClose(imag(vec(i)), -imag(vec(i-1)), delta);
-                if closeReal && closeImag
-                    if imag(vec(i)) < 0
-                        formatedVec(i-1) = vec(i);
-                        formatedVec(i) = vec(i-1);
-                    else
-                        formatedVec(i) = vec(i);
-                    end
-                else
-                    formatedVec(i) = vec(i);
-                end
-            end
-        else
-            formatedVec = vec;
-        end
-    end
-    
-% Comparison of similar numbers
-    function trueFalse = isClose(n1, n2, dlt)
-        trueFalse = abs(n1- n2) < dlt;
-    end
-
-% Adds poles for new gain to rootlocus
-% newVector: vector of n CL poles for new gain of n row and 1 column
-    function newMat = enlargePoleMat(oldMat, newVector)
-        hMat = height(oldMat);
-        hVec = height(newVector);
-        if hMat ~= hVec
-            if hVec < hMat
-                newVector = [newVector; zeros(hMat - hVec, 1)];
-            else
-                oldMat = [oldMat; zeros(hVec - hMat, width(oldMat))];
-            end    
-        end
-        newVector = reassembleVectors(oldMat(:, end), newVector);
-        newMat = [oldMat, newVector];
-    end
-
-% Adds state of root locus to the stack
-    function saveToStack()
+    % Adds state of root locus to the stack
+    function saveToStack(newState)
         stackRL = cell([2 length(rlocusLines)]);
         for idx = 1:length(rlocusLines)
             stackRL{1, idx} = rlocusLines{idx}.XData;
             stackRL{2, idx} = rlocusLines{idx}.YData;
         end
-        stackOLPole = {plotPoles.XData, plotPoles.YData};
-        if ~isempty(plotZeros)
-            stackOLZero = {plotZeros.XData, plotZeros.YData};
-        else
-            stackOLZero = {};
-        end
-        stackCLPole = {plotCLPoles.XData, plotCLPoles.YData};
-        stackTFText = tfText;
-        stackNum = numerator;
-        stackDen = denominator;
-        stackGain = gainEdit.Value;
+    
+        stackOLPole = olPoles;
+        stackOLZero = olZeros;
+        stackCLPole = clPoles;
+    
+        stackNumP = numP;
+        stackDenP = denP;
+        stackD = D; 
+        stackGain = currGain;
         stackParNum = paramNum;
         stackParDen = paramDen;
-        stackParText = paramTfText;
+        stackReg = reg;
+        stackParamInfo = paramInfo;
         
         % saves to undo stack from temporary stack
         if helpStack.getSize() > 0
             [stackRLtmp, stackOLPoletmp, stackOLZerotmp, stackCLPoletmp, ...
-                stackTFTexttmp, stackNumtmp, stackDentmp, stackGaintmp, ...
-                stackParNumtmp, stackParDentmp, stackParTexttmp] = helpStack.pop();
-            undoStack.push(stackRLtmp, stackOLPoletmp, stackOLZerotmp, ...
-                stackCLPoletmp, stackTFTexttmp, stackNumtmp, stackDentmp, ...
-                stackGaintmp, stackParNumtmp, stackParDentmp, stackParTexttmp);
+                stackNumPtmp, stackDenPtmp, stackDtmp, stackGaintmp, ...
+                stackParNumtmp, stackParDentmp, stackParamInfotmp, stackRegtmp] = helpStack.pop();
+            if newState
+                undoStack.push(stackRLtmp, stackOLPoletmp, stackOLZerotmp, ...
+                    stackCLPoletmp, stackNumPtmp, stackDenPtmp, stackDtmp, ...
+                    stackGaintmp, stackParNumtmp, stackParDentmp, stackParamInfotmp, stackRegtmp);
+            end
         end
         helpStack.push(stackRL, stackOLPole, stackOLZero, stackCLPole, ...
-            stackTFText, stackNum, stackDen, stackGain, stackParNum, ...
-            stackParDen, stackParText);
+            stackNumP, stackDenP, stackD, stackGain, stackParNum, ...
+            stackParDen, stackParamInfo, stackReg);
+        end
+    
+    % Redraw root locus for updated system
+    function redraw(varargin)
+        clearCanvas
+        if isnumeric(varargin{1}) % Matrix notation
+            newNumP = varargin{1};
+            newNumD = varargin{3};
+            newDenP = varargin{2};
+            newDenD = varargin{3};
+            setCurrentSystem(newNumP, newNumD, newDenP, newDenD);
+        else % string notation
+            newNum = varargin{1};
+            newDen = varargin{2};
+            setCurrentSystem(newNum, newDen);
+        end
+       
+        drawRL
+        if hPoleDir.Value
+            clearPolesDirection
+            drawPoleDirection
+        end
     end
     
-% Clears complex plane
-    function clearCanvas()
+    % Clears complex plane
+    function clearCanvas
         % Delete each line and sets it to empty 
-        for data = rlocusLines
-            delete(data{1});
+        for i = 1:length(rlocusLines)
+            data = rlocusLines{i};
+            delete(data);
         end
         delete(plotPoles);
         delete(plotZeros);
         delete(plotCLPoles);
-        tfText = '';
-        %hTFText.String = '';
-        setEmptyData();
+        setEmptyData
     end
     
-% Clears data
-    function setEmptyData()
+    % Clears plot data
+    function setEmptyData
         rlocusLines = [];
         plotPoles = [];
         plotZeros = [];
         plotCLPoles = [];
     end
     
-% Redraw root locus
-    function redraw(varargin)
-        updateRunningText('Running');
-        pause(0.1)
-        clearCanvas();
-        newNum = varargin{1};
-        newDen = varargin{2};
-        drawRL(newNum, newDen);
-        updateRunningText('');
-    end
-
-% Convert roots to polynomial string
-    function poly_str = rootsToPoly(myRoots)
-        coefs = poly(myRoots);
-        poly_str = '';
-        n = length(coefs) - 1;
-        for i = 1:length(coefs)
-            coef = coefs(i);
-            if coef ~= 0
-          
-                if coef > 0 && i > 1
-                    poly_str = strcat(poly_str, '+');
-                elseif coef < 0
-                    poly_str = strcat(poly_str, '-');
-                end
-        
-                abs_coef = abs(coef);
-        
-                if abs_coef ~= 1 || i == length(coefs)
-                    poly_str = strcat(poly_str, num2str(abs_coef));
-                end
-        
-                if n > 1
-                    if i > 1
-                       poly_str = strcat(poly_str, '.*'); 
-                    end
-                    poly_str = strcat(poly_str, 's.^', num2str(n));
-                elseif n == 1
-                    poly_str = strcat(poly_str, '.*s');
-                end
-            end
-            n = n-1;
-        end 
-    end
+    %% Callback functions
     
-% Add save parameters
-    function setNewParameterEq
-        TDTFparameters = cell(0);
-        if (length(paramDen) + length(paramNum)) > 0 
-            % indexes of capital letters
-            numIdxs = [];
-            denIdxs = [];
-            numUpper = isstrprop(paramNum, 'upper');
-            denUpper = isstrprop(paramDen, 'upper');
-            % Adds indexes of capital letters
-            numIdxs(end+1:end+sum(numUpper)) = find(numUpper); 
-            denIdxs(end+1:end+sum(denUpper)) = find(denUpper);
+    % Undo action callback
+    function doUndo(~, ~)
+        if undoStack.getSize() > 0
+            % Pop from stack
+            [rlocusLinesData, olPolesData, olZerosData, clPolesData, ...
+                numPData, denPData, DData, gainData, parNumData, parDenData,...
+                paramInfoData, regData] = undoStack.undo();
             
-            % Gets char of parameters ('ABC')
-            charNum = char(paramNum(numIdxs));
-            charDen = char(paramDen(denIdxs));
-             
-            TDTFparameters(end+1:end+length(charNum)) = num2cell(charNum(:));
-            TDTFparameters(end+1:end+length(charDen)) = num2cell(charDen(:));
+            % Draw if any data poped from the stack
+            if ~isempty(rlocusLinesData)
+                clearCanvas();
+                % Plot root locus
+                for idx = 1:length(rlocusLinesData)
+                    rlocusLines{idx} = plot(hAx, rlocusLinesData{1, idx}, ...
+                        rlocusLinesData{2, idx}, Color=RLLineCol , ...
+                        Tag='rlocus', LineWidth=1.5);
+                end
+                
+                olPoles = olPolesData;
+                olZeros = olZerosData;
+                clPoles = clPolesData;
+                numP = numPData;
+                denP = denPData;
+                D = DData;
+                currGain = gainData;
+                gainEdit.Value = currGain;
+                gainSlider.Value = log10(currGain);
+                gainSlider.Value = log10(currGain);
+                paramNum = parNumData;
+                paramDen = parDenData;
+                paramInfo = paramInfoData;
+                reg = regData;
+    
+                drawPolesZeros
+                setCurrentSystem(numP, D, denP, D);
+                saveToStack(false);
+            end
+        end 
+    end 
+    
+    % Axis callback function
+    function updateAxes
+    % Update the x and y axis line
+        set(hXAxis, XData=hAx.XLim, YData=[0 0]);
+        set(hYAxis, XData=[0 0], YData=hAx.YLim);
+    end
+    
+    % Load new Time delay transfer function
+    function openTDTFPopupCallback(~, ~)
+
+        % Set up figure
+        pixelWidth = 7;
+        strnum = matrix2string(numP, D);
+        strden = matrix2string(denP, D);
+        fieldWidth = max([length(strnum), length(strden), 16]);
+        hTDTFPopupFig = uifigure(Name='Edit Time delay transfer function', ...
+            Position=[500, 300, fieldWidth*2*pixelWidth+50, 150]);
+        hTDTFLabel = uilabel(hTDTFPopupFig, Text='Choose time delay transfer function', ...
+            Position=[round(fieldWidth*pixelWidth/4) 125 250 22]);
+        hNumEditField = uieditfield(hTDTFPopupFig, ...
+            Position=[round(fieldWidth*pixelWidth/4) 90 fieldWidth*pixelWidth 22]);
+        hFraction = uilabel(hTDTFPopupFig, Text=repmat('_', 1, fieldWidth), ...
+            Position=[round(fieldWidth*pixelWidth/4) 75 fieldWidth*(pixelWidth+1) 22]);
+        hDenEditField = uieditfield(hTDTFPopupFig, ...
+            Position=[round(fieldWidth*pixelWidth/4) 45 fieldWidth*pixelWidth 22]);
+        hEditButton = uibutton(hTDTFPopupFig, Text='Edit', ...
+            Position=[round(fieldWidth*pixelWidth) 12 50 22], ButtonPushedFcn=@generateNewTDRL);
+        hLoadNumButton = uibutton(hTDTFPopupFig, Text='Load Numerator', ...
+            Position=[round(fieldWidth*pixelWidth*4/3) 90 120 22], ButtonPushedFcn=@(~,~)loadPD(true));
+        hLoadDenButton = uibutton(hTDTFPopupFig, Text='Load Denominator', ...
+            Position=[round(fieldWidth*pixelWidth*4/3) 45 120 22], ButtonPushedFcn=@(~,~)loadPD(false));
+    
+        hNumEditField.Value = strnum;
+        hDenEditField.Value = strden;
+    
+        function generateNewTDRL(~, ~)
+            redraw(string(hNumEditField.Value), string(hDenEditField.Value));
+            close(hTDTFPopupFig);
+        end
+        
+        % Load P and D matrices from workspace
+        function loadPD(isNum)
+            Pmat = 1;
+            Dmat = 0;
+            nameP = '';
+            nameD = '';
+            hPDPopupFig = uifigure(Name='Choose P and D matrix', Position=[500, 300, 350, 300]);
+            vars = evalin('base', 'whos');
+            numVars = vars({vars.class}=="double");
+            varNames = {numVars.name};
+            hChooseP = uilabel(hPDPopupFig, Text='Choose P matrix', Position=[50 260 250 22]);
+            hChooseD = uilabel(hPDPopupFig, Text='Choose D matrix', Position=[200 260 250 22]);
+            hListboxP = uilistbox(hPDPopupFig, Position=[50, 100, 100, 150], ...
+                Items=varNames, ClickedFcn=@listboxCallback, Tag='Plistbox');
+            hListboxD = uilistbox(hPDPopupFig, Position=[200, 100, 100, 150], ...
+                Items=varNames, ClickedFcn=@listboxCallback, Tag='Dlistbox');        
+    
+            hChoosenP = uilabel(hPDPopupFig, Text=strcat('Choosen P matrix:', nameP), Position=[50 60 250 22]);
+            hChoosenD = uilabel(hPDPopupFig, Text=strcat('Choosen D matrix:', nameD), Position=[200 60 250 22]);
+            hSavePDButton = uibutton(hPDPopupFig, Text='Choose matrices', Position=[50 20 150 22], ButtonPushedFcn=@(~,~)savePD);
+            
+            function listboxCallback(src, event)
+                idx = event.InteractionInformation.Item;
+                selectedMat = src.Items{idx};
+                newMat = evalin('base', selectedMat);
+                if src.Tag == 'Plistbox'
+                    nameP = selectedMat;
+                    hChoosenP.Text = strcat('Choosen P matrix:', nameP);
+                    Pmat = newMat;
+                elseif src.Tag == 'Dlistbox'
+                    nameD = selectedMat;
+                    hChoosenD.Text = strcat('Choosen D matrix:', nameD);
+                    Dmat = newMat; 
+                end   
+            end
+    
+            function savePD
+                if isNum
+                    hNumEditField.Value = matrix2string(Pmat, Dmat);
+                else
+                    hDenEditField.Value = matrix2string(Pmat, Dmat);
+                end
+                close(hPDPopupFig)
+            end
         end
     end
     
-% Update parametric to numbers
-    function updateParameters
-        tmpNum = paramNum;
-        tmpDen = paramDen;
+    % Gain slider callback (update during changing slider value)
+    function sliderMovement(~, event)
+        currGain = 10^event.Value;
+        dK = currGain - gainEdit.Value;
         
-        for i = 1:length(TDTFparameters)
-            if contains(paramNum, TDTFparameters{i})
-                tmpNum = strrep(tmpNum, TDTFparameters{i}, num2str(paramValues(i)));
-            else
-                tmpDen = strrep(tmpDen, TDTFparameters{i}, num2str(paramValues(i)));
+        newPoles = iterate_root(clPoles, numP, denP, D, dendP, numdP, ds, gainEdit.Value, dK);
+
+        % If shift is too big, compute poles directly
+        if max(abs(newPoles - clPoles)) > maxStep*4
+            clPoles = compute_roots(reg, denP+currGain*numP, D, ds);
+        else
+            clPoles = newPoles;
+        end
+        gainEdit.Value = currGain;
+        updateCLPoles;
+    end
+    
+    % Gain slider callback (update after slider movement stopped)
+    function sliderMoved(~, event)
+        currGain = 10^event.Value;
+        P = denP+currGain*numP;
+        clPoles = compute_roots(reg, P, D, ds);
+        gainEdit.Value = currGain;
+    
+        updateCLPoles;
+        saveToStack(true);
+    end
+    
+    % Edit gain callback
+    function editGain(src, ~)
+        clPoles = compute_roots(reg, denP+src.Value*numP, D, ds);
+        if src.Value < minSliderLim
+            gainSlider.Value = log10(minSliderLim);
+        else
+            gainSlider.Value = log10(src.Value);
+        end
+        updateCLPoles;
+    end
+    
+    % Togle visibility mode pole change directions
+    function togglePoleDirection(src, ~)
+        if src.Value
+            drawPoleDirection
+        else
+            clearPolesDirection
+        end
+    end
+    
+    % Clear directions
+    function clearPolesDirection
+        for i = 1:length(poleDirections)
+            data = poleDirections{i};
+            delete(data);
+        end
+        poleDirections = {};        
+    end
+    
+    % Draw directions
+    function drawPoleDirection
+        if ~isempty(clPoles)
+            num = evaluate_poly(clPoles, numP, D, 0.1, false);
+            den = evaluate_poly(clPoles, dendP, D, 0.1, false) + currGain.*evaluate_poly(clPoles, numdP, D, 0.1, false);
+            C = -(num./den);
+            C = C./abs(C);
+            scaleRatio = 1/2;
+            for i = 1:length(clPoles)
+                poleDirections{2*i-1} = quiver(hAx, real(clPoles(i)), imag(clPoles(i)), ...
+                    scaleRatio*real(C(i)), scaleRatio*imag(C(i)), 'b', 'LineWidth', 1.2, 'MaxHeadSize', 2);
+                
+                poleDirections{2*i} = quiver(hAx, real(clPoles(i)), -imag(clPoles(i)), ...
+                    scaleRatio*real(C(i)), -scaleRatio*imag(C(i)), 'b', 'LineWidth', 1.2, 'MaxHeadSize', 2);
             end
         end
-        numerator = tmpNum;
-        denominator = tmpDen;
-    end
-  
-% Check for parametric notation
-    function [isParam, numParams] = hasParam(strNum, strDen)
-        isParam = any(isstrprop(strNum, 'upper')) | any(isstrprop(strDen, 'upper'));
-        numParams = sum(isstrprop(strNum, 'upper')) + sum(isstrprop(strDen, 'upper'));
     end
 
-% Loads png image
-    function newImg = setWhiteBackground(img, alpha)
-        bgcolor = [1 1 1]; 
-        img = im2double(img);
-        alpha = im2double(alpha);
-        newImg = img.*alpha + permute(bgcolor,[1 3 2]).*(1-alpha);
+    % Update directions while moving poles
+    function updatePoleDirection
+        num = evaluate_poly(clPoles, numP, D, 0.1, false);
+        den = evaluate_poly(clPoles, dendP, D, 0.1, false) + currGain.*evaluate_poly(clPoles, numdP, D, 0.1, false);
+        C = -(num./den);
+        C = C./abs(C);
+        scaleRatio = 1/2;
+        for i = 1:length(clPoles)
+            poleDirections{2*i-1}.XData = real(clPoles(i));
+            poleDirections{2*i}.XData = real(clPoles(i));
+            poleDirections{2*i-1}.YData = imag(clPoles(i));
+            poleDirections{2*i}.YData = -imag(clPoles(i)); 
+            poleDirections{2*i-1}.UData = scaleRatio*real(C(i));
+            poleDirections{2*i}.UData = scaleRatio*real(C(i));
+            poleDirections{2*i-1}.VData = scaleRatio*imag(C(i));
+            poleDirections{2*i}.VData = -scaleRatio*imag(C(i));  
+        end
     end
 
-% Toggle of other toolbar buttons
+    % Parameter slider window callback   
+    function openSliderWindow(~, ~)   
+        numSliders = paramInfo.numEntries;
+        textWidth = max([length(paramNum), length(paramDen), 16])*7;
+        
+        hSliderFig = uifigure(Name='Slider Window', ...
+                Position=[500, 300, max([400, textWidth+120]), numSliders*60+100]);
+        
+        hNumText = uilabel(hSliderFig, Position=[50, numSliders*60+70, textWidth, 20], Text=paramNum, ...
+                FontSize=14, HorizontalAlignment="right");
+        hLineText = uilabel(hSliderFig, Position=[50, numSliders*60+62, textWidth, 20], Text=repmat('_', 1, textWidth/7), ...
+            FontSize=14, HorizontalAlignment="right");
+        hLineText.WordWrap = 'on';
+        hDenText = uilabel(hSliderFig, Position=[50, numSliders*60+45, textWidth, 20], Text=paramDen, ...
+                FontSize=14, HorizontalAlignment="right");
+    
+        paramEdits = dictionary();
+        paramSliders = dictionary();
+        
+        if paramInfo.numEntries > 0
+            keys = paramInfo.keys;
+            for i = 1:length(keys)
+                paramKey = keys(i);
+                uilabel(hSliderFig, Text=paramKey, ...
+                    Position=[20, numSliders*60-(i-1)*50-20, 120, 20]);
+                
+                % Create edit field
+                paramEdits(paramKey) = uieditfield(hSliderFig, 'numeric', Value=paramInfo(paramKey), ...
+                    Position=[60, numSliders*60-(i-1)*50-20, 80, 20], Tag=paramKey, ...
+                    ValueChangedFcn=@editParamValue, ValueDisplayFormat='%.3f');
+            
+                % Create the slider
+                paramSliders(paramKey) = uislider(hSliderFig, Position=[160, numSliders*60-(i-1)*50, 200, 3], ...
+                    Limits=[-10 10], Value=paramInfo(paramKey), ... 
+                    Tag=paramKey, ValueChangedFcn=@editParamValue); % Tag the slider for future reference
+            end
+        end
+    
+        function editParamValue(src, ~)
+            parKey = src.Tag;
+            paramEdits(parKey).Value = src.Value;
+            paramSliders(parKey).Value = src.Value;
+            paramInfo(parKey) = src.Value;
+            redraw(paramNum, paramDen);
+        end
+    end
+    
+    % Manual region callback
+    function openRegPopupCallback(src, ~)
+        hRegPopupFig = uifigure(Name='Select region limits', Position=[500, 300, 250, 160]);
+        hRegLabel = uilabel(hRegPopupFig, Text='Select plot region limits', Position=[60 135 250 22]);
+        uilabel(hRegPopupFig, Text='Real limits:', Position=[5 90 90 22]);
+        uilabel(hRegPopupFig, Text='Min', Position=[125 112 90 22]);
+        uilabel(hRegPopupFig, Text='Max', Position=[200 112 90 22]);
+        hMinReal = uieditfield(hRegPopupFig, 'numeric', Position=[110 90 50 22], Value=reg(1));
+        hMaxReal = uieditfield(hRegPopupFig, 'numeric', Position=[185 90 50 22], Value=reg(2));
+        uilabel(hRegPopupFig, Text='Imaginary limits:', Position=[5 45 90 22]);
+        uilabel(hRegPopupFig, Text='Min', Position=[125 67 50 22]);
+        uilabel(hRegPopupFig, Text='Max', Position=[200 67 50 22]);
+        hMinImag = uieditfield(hRegPopupFig, 'numeric', Position=[110 45 50 22], Value=reg(3));
+        hMaxImag = uieditfield(hRegPopupFig, "numeric", Position=[185 45 50 22], Value=reg(4));
+        hPlotButton = uibutton(hRegPopupFig, Text="Plot", Position=[100 10 50 22], ButtonPushedFcn=@setNewReg);
+        
+    
+        function setNewReg(~, ~)
+            reg = [hMinReal.Value hMaxReal.Value min([hMinImag.Value, 0]) hMaxImag.Value];
+            redrawRegion(src, false);
+            close(hRegPopupFig);
+        end
+    
+    end
+    
+    % Automatic region callback
+    function redrawRegion(~, auto)
+        if auto == true
+            xMin = hAx.XLim(1);
+            xMax = hAx.XLim(2);
+            yMin = max([hAx.YLim(1), 0]);
+            yMax = hAx.YLim(2);
+            reg = [xMin xMax yMin yMax];
+        end
+        
+        redraw(numP, denP, D)
+    end
+    
+    % Enable changing gain by dragging
+    function moveOn(src, ~)
+        toggleOffOthers(src, hPoleSelect, hPolesSelect, ...
+                hZeroSelect, hZerosSelect, ...
+                hZoomOutBtn, hZoomInBtn, hPanBtn);
+        set(hFig, Pointer='custom', PointerShapeCData=moveCursorMat, ...
+            PointerShapeHotSpot=[10, 9]);
+        movePoles= true;
+    end
+    
+    % Disable changing poles by dragging
+    function moveOff(~, ~)
+        set(hFig, Pointer='arrow');
+        movePoles = false;
+    end
+    
+    % Add poles/zeros or drag poles when mouse pushed
+    function mousePushed(~, ~)
+        addingPZ = (hPoleSelect.State == "on") | (hPolesSelect.State == "on") ...
+            | (hZeroSelect.State == "on") | (hZerosSelect.State == "on");
+
+        % Adding poles/zeros
+        if addingPZ
+            cp = get(hAx, 'CurrentPoint');
+            x = cp(1,1);
+            y = cp(1,2);
+            newDen = 1;
+            newNum = 1;
+            if selectedMode == "RealPole"
+                newDen = poly(x);
+            elseif selectedMode == "ImagPole"
+                newDen = poly([x+y*1i, x-y*1i]);
+            elseif selectedMode == "RealZero"
+                newNum = poly(x);
+            elseif selectedMode == "ImagZero"
+                newNum = poly([x+y*1i, x-y*1i]);
+            end
+            
+            orderNum = size(numP, 2) + size(newNum, 2) - 1;
+            orderDen = size(denP, 2) + size(newDen, 2) - 1;
+    
+            if max([orderNum, orderDen]) < 8
+                convNum = zeros(size(D, 1), orderNum);
+                convDen = zeros(size(D, 1), orderDen);
+                for i = 1:size(numP, 1)
+                    convNum(i, :) = conv(numP(i,:), newNum);
+                end
+                for i = 1:size(denP, 1)
+                    convDen(i, :) = conv(denP(i,:), newDen);
+                end
+                redraw(convNum, convDen, D);
+            end
+        
+        % Moving poles by dragging
+        elseif movePoles
+            movingPolesNow = true;
+            set(hFig, WindowButtonMotionFcn=@holdAndChangeGain);
+        end
+    end
+    
+    % Stop dragging poles
+    function mouseReleased(~, ~)
+        movingPolesNow = false;
+        if movePoles
+            set(hFig, Pointer='custom', PointerShapeCData=moveCursorMat, ...
+                PointerShapeHotSpot=[10, 9]);
+            saveToStack(true);
+        end
+        set(hFig, WindowButtonMotionFcn=[]);
+    end
+    
+    % Changing poles by draging
+    function holdAndChangeGain(~, ~)
+        currPoint = get(hAx, 'CurrentPoint');
+        set(hFig, Pointer='custom', PointerShapeCData=holdCursorMat, ...
+            PointerShapeHotSpot=[10, 9]);
+        x = currPoint(1,1);
+        y = currPoint(1,2);
+        activeXReg = diff(hAx.XLim)/10;
+        activeYReg = diff(hAx.YLim)/10;
+        dists = sqrt(((plotCLPoles.XData - x) / activeXReg).^2 +...
+            ((plotCLPoles.YData - y) / activeYReg).^2);
+    
+        [minVal, minIdx] = min(dists);
+        if minVal < (activeXReg + activeYReg) && movingPolesNow
+            if minIdx > length(clPoles) % conjurates
+                minIdx = minIdx - length(clPoles);
+                y = -y;
+            end
+            s0 = clPoles(minIdx);
+            K0 = currGain;
+            sVec = (x + y*1i) - s0;
+            rProj = pole_projection(s0, K0, numP, denP, numdP, dendP, D, sVec);
+            
+            
+            dK = get_dk(s0, K0, numP, numdP, dendP, D, rProj);
+            K = K0 + dK;
+            K = min([abs(K), maxSliderLim]);
+            currP = denP + K*numP;
+            clPoles = compute_roots(reg, currP, D, ds);
+            %clPoles = iterate_root(clPoles, numP, denP, D, dendP, numdP, K0, dK, 0.01, 0.1);
+            currGain = K;
+            gainEdit.Value = currGain;
+            gainSlider.Value = log10(currGain);
+            if K < minSliderLim
+                gainSlider.Value = log10(minSliderLim);
+            else
+                gainSlider.Value = log10(K);
+            end
+            updateCLPoles
+            pause(0.05)
+        end
+    end
+    
+    % Toggle of other toolbar buttons
     function toggleOffOthers(src, varargin)
         for i = 1:length(varargin)
             if isa(varargin{i}, class(src)) % Checks if varargin is ToggleTool
@@ -726,329 +858,60 @@ function tdrlocus(Reg, varargin)
             end
         end
     end
-
-% Checks if closed loop is not stable
-    function stabilityTest(Fun)
-        stabReg = [0 100 -1000 1000];
-        stabPoles = QPmR(stabReg, Fun, varargin{3:end});        
-        if ~isempty(stabPoles)
-            updateStabilityText('Not stable');
-        else
-            updateStabilityText('');
-        end 
-    end
-
-% Updates stability text
-    function updateStabilityText(str)
-        delete(hStableText)
-        xL = hAx.XLim(2);
-        yL = hAx.YLim(2);
-        hStableText = text(hAx, 0.99*xL, 0.99*yL , str, FontSize=16, ...
-            HorizontalAlignment='right', VerticalAlignment='top', Color=[1 0 0]);
-    end
-
-    function updateRunningText(str)
-        delete(hRunningText)
-        xL = hAx.XLim(2);
-        yL = hAx.YLim(1);
-        hRunningText = text(hAx, 0.99*xL, 0.99*yL , str, FontSize=16, ...
-                HorizontalAlignment='right', VerticalAlignment='bottom', Color=[1 0 0]);
-    end
-
-    %% Callback functions
-
-% Gain slider callback (real-time update)
-    function sliderMovement(~, event)
-        gainEdit.Value = event.Value;
-        updateCLPoles(event.Value, false);
-    end
-
-% Gain slider callback (update after slider movement stopped)
-    function sliderMoved(~, event)
-        gainEdit.Value = event.Value;
-        updateCLPoles(event.Value, true);
-    end
     
-% Gain up callback
-    function buttonUp(~, ~)
-        if 10*maxSliderLim < power(10, maxLogLim)
-            maxSliderLim = 10*maxSliderLim;
-            gainSlider.Limits = [minSliderLim, maxSliderLim];
-            gainEdit.Limits = [minSliderLim, maxSliderLim];
-            updateCLPoles(gainEdit.Value, true);
-        end        
-    end
-    
-% Gain down callback
-    function buttonDown(~, ~)
-        if maxSliderLim/10 > power(10, minLogLim)
-            maxSliderLim = maxSliderLim/10;
-            gainSlider.Limits = [minSliderLim, maxSliderLim];
-            gainEdit.Limits = [minSliderLim, maxSliderLim];
-            updateCLPoles(gainEdit.Value, true);
-        end
-    end
-
-% Edit gain callback
-    function editGain(src, ~)
-        gainSlider.Value = src.Value;
-        updateCLPoles(src.Value, true);
-    end
-
-% Axis callback function
-    function updateAxes(hAx, hXAxis, hYAxis)
-        % Update the x-axis line
-        set(hXAxis, XData=hAx.XLim, YData=[0 0]);
-        % Update the y-axis line
-        set(hYAxis, XData=[0 0], YData=hAx.YLim);
-        updateStabilityText(hStableText.String);
-        updateRunningText(hRunningText.String);
-    end
-
-% Undo action callback
-    function doUndo(~, ~)
-        if undoStack.getSize() > 0
-            [rlocusLinesData, plotPolesData, plotZerosData, plotCLPolesData, ...
-                tfText, numerator, denominator, gainData, paramNum, paramDen, ...
-                paramTfText] = undoStack.pop();
-            clearCanvas();
-    
-            if ~isempty(rlocusLinesData)
-                % Plot root locus
-                if hDiscreteRL.Value
-                    rlocusLines{1} = plot(hAx, rlocusLinesData{1}, ...
-                            rlocusLinesData{2},Tag="rlocus", LineStyle='none', ...
-                            Marker='.', MarkerFaceColor=RLLineCol, MarkerEdgeColor=RLLineCol);
-                else
-                    for idx = 1:width(rlocusLinesData)
-                        rlocusLines{idx} = plot(hAx, rlocusLinesData{1, idx}, ...
-                            rlocusLinesData{2, idx}, Color=RLLineCol ,Tag="rlocus");
-                    end
-                end
-                
-                % Plot OL poles
-                plotPoles = plot(hAx, plotPolesData{1}, plotPolesData{2}, "x", ...
-                    MarkerFaceColor=OLPoleCol, MarkerEdgeColor=OLPoleCol, ...
-                    MarkerSize=10, LineWidth=1.5, Tag="olpole");
-                
-                
-                if ~isempty(plotZerosData)
-                % Plot OL zeros
-                plotZeros = plot(hAx, plotZerosData{1}, plotZerosData{2}, "o", ...
-                    MarkerEdgeColor=OLZeroCol, MarkerSize=10, LineWidth=1.5, ...
-                    Tag="olzero");
-                end
-        
-                % Plot CL poles
-                plotCLPoles = plot(hAx, plotCLPolesData{1},  plotCLPolesData{2}, "x" ,Tag="clpole", ...
-                        MarkerSize=10, LineWidth=1.5, MarkerFaceColor="red", ...
-                        MarkerEdgeColor="red");
-        
-                hTFText.String = tfText;
-                gainEdit.Value = gainData;
-                gainSlider.Value = gainData;
-            end
-        end 
-    end 
-
-
-% New time delay transfer function update
-    function openTDTFPopupCallback(~, ~)
-        hTDTFPopupFig = uifigure(Name='Edit Time delay transfer function', Position=[500, 300, 250, 150]);
-        hTDTFLabel = uilabel(hTDTFPopupFig, Text='Choose time delay transfer function', Position=[30 125 250 22]);
-        hNumEditField = uieditfield(hTDTFPopupFig, Position=[50 90 150 22]);
-        hFraction = uilabel(hTDTFPopupFig, Text='______________________', Position=[50 75 150 22]);
-        hDenEditField = uieditfield(hTDTFPopupFig, Position=[50 45 150 22]);
-        hEditButton = uibutton(hTDTFPopupFig, Text='Edit', Position=[100 12 50 22], ButtonPushedFcn=@generateNewTDRL);
-
-        if isempty(TDTFparameters) > 0
-            hNumEditField.Value = numerator;
-            hDenEditField.Value = denominator;
-        else
-            hNumEditField.Value = paramNum;
-            hDenEditField.Value = paramDen;
-        end
-
-        function generateNewTDRL(~, ~)
-            redraw(hNumEditField.Value, hDenEditField.Value); 
-            close(hTDTFPopupFig);
-        end
-    end
-    
-% Slider window callback
-    function openSliderWindow(~, ~)
-        numSliders = length(TDTFparameters);
-        hSliderFig = uifigure(Name='Slider Window', Toolbar='none', ...
-                Position=[500, 300, 400, numSliders * 60+100]);
-        uilabel(hSliderFig, Position=[50 numSliders*60 + 10 400 80], Text=paramTfText, ...
-                FontSize=20, Interpreter="latex");
-       
-        % set new handles
-        paramEdits = cell(0);
-        paramSliders = cell(0);
-        for i = 1:numSliders
-             uilabel(hSliderFig, Text=TDTFparameters(i), ...
-                 Position=[20, numSliders*60-i*50, 120, 20]);
-            
-             paramEdits{i} = uieditfield(hSliderFig, 'numeric', Value=paramValues(i), ...
-                 Position=[60, numSliders*60-i*50, 80, 20], Tag=['edit_' num2str(i)], ...
-                 ValueChangedFcn=@editParamValue);
-
-            
-             % Create the slider
-             paramSliders{i} = uislider(hSliderFig, Position=[160, numSliders*60-i*50+20, 200, 3], ...
-                 Limits=[-10 10], Value=paramValues(i), ... 
-                 Tag=['slider_' num2str(i)], ValueChangedFcn=@editParamValue); % Tag the slider for future reference
-        end
-        
-        % Parameter update callback
-        function editParamValue(src, ~)
-            idx = str2double(src.Tag(end));
-            paramValues(idx) = src.Value;
-            paramEdits{idx}.Value = src.Value;
-            paramSliders{idx}.Value = src.Value;
-            
-            redraw(paramNum, paramDen);
-        end
-    end
-
-% Manual region callback
-    function openRegPopupCallback(src, ~)
-        hRegPopupFig = uifigure(Name='Select region limits', Position=[500, 300, 250, 160]);
-        hRegLabel = uilabel(hRegPopupFig, Text='Select plot region limits', Position=[60 135 250 22]);
-        uilabel(hRegPopupFig, Text='Real limits:', Position=[5 90 90 22]);
-        uilabel(hRegPopupFig, Text='Min', Position=[125 112 90 22]);
-        uilabel(hRegPopupFig, Text='Max', Position=[200 112 90 22]);
-        hMinReal = uieditfield(hRegPopupFig, 'numeric', Position=[110 90 50 22], Value=Reg(1));
-        hMaxReal = uieditfield(hRegPopupFig, 'numeric', Position=[185 90 50 22], Value=Reg(2));
-        uilabel(hRegPopupFig, Text='Imaginary limits:', Position=[5 45 90 22]);
-        uilabel(hRegPopupFig, Text='Min', Position=[125 67 50 22]);
-        uilabel(hRegPopupFig, Text='Max', Position=[200 67 50 22]);
-        hMinImag = uieditfield(hRegPopupFig, 'numeric', Position=[110 45 50 22], Value=Reg(3));
-        hMaxImag = uieditfield(hRegPopupFig, "numeric", Position=[185 45 50 22], Value=Reg(4));
-        hPlotButton = uibutton(hRegPopupFig, Text="Plot", Position=[100 10 50 22], ButtonPushedFcn=@setNewReg);
-        
-   
-        function setNewReg(~, ~)
-            Reg = [hMinReal.Value hMaxReal.Value hMinImag.Value hMaxImag.Value];
-            redrawRegion(src, false);
-            close(hRegPopupFig);
-        end
-
-    end
-
-% Automatic region callback
-    function redrawRegion(~, auto)
-        if auto == true
-            xMin = hAx.XLim(1);
-            xMax = hAx.XLim(2);
-            yMin = hAx.YLim(1);
-            yMax = hAx.YLim(2);
-            Reg = [xMin xMax yMin yMax];
-        end
-        
-        redraw(numerator, denominator)
-    end
-
-
-    function toggleRLMode(~, ~)
-        if contains(numerator, 's') || contains(denominator, 's')
-            redraw(numerator, denominator);
-        end
-    end
-
-
-% Mouse click event callback 
-    function mouseClickCallback(~, ~)
-        % Get the current point in the figure
-        cp = get(hAx, 'CurrentPoint');
-        x = cp(1,1);
-        y = cp(1,2);
-        addingPZ = (hPoleSelect.State == "on") | (hPolesSelect.State == "on") ...
-            | (hZeroSelect.State == "on") | (hZerosSelect.State == "on");
-        if addingPZ
-            if selectedMode == "RealPole"
-                newDen = strcat('(', denominator, ')', '.*', '(s-',num2str(x), ')' );
-                newParDen = strcat('(', paramDen, ')', '.*', '(s-',num2str(x), ')' );
-                newNum = numerator;
-                newParNum = paramNum;
-            elseif selectedMode == "ImagPole"
-                newPoly = rootsToPoly([x+y*1i x-y*1i]);
-                newDen = strcat('(', denominator, ')', '.*', '(',newPoly,')' );
-                newParDen = strcat('(', paramDen, ')', '.*', '(',newPoly,')' );
-                newNum = numerator;
-                newParNum = paramNum;
-            elseif selectedMode == "RealZero"
-                newDen = denominator;
-                newParDen = paramDen;
-                newNum = strcat('(', numerator, ')', '.*', '(s-',num2str(x), ')' );
-                newParNum = strcat('(', paramNum, ')', '.*', '(s-',num2str(x), ')' );
-            elseif selectedMode == "ImagZero"
-                newPoly = rootsToPoly([x+y*1i x-y*1i]);
-                newDen = denominator;
-                newParDen = paramDen;
-                newNum = strcat('(', numerator, ')', '.*', '(',newPoly,')' );
-                newParNum = strcat('(', paramNum, ')', '.*', '(',newPoly,')' );
-            end
-            if isempty(paramValues)
-                redraw(newNum, newDen);
-            else
-                    redraw(newParNum, newParDen);
-            end
-        end
-    end
-
-% Toggle pole/zero adding mode callback
+    % Toggle pole/zero adding mode callback
     function toggleModeSelect(src, varargin)
         toggleOffOthers(src, varargin{:});
         idx = str2num(src.Tag);
         selectedMode = selectionModes{idx};
     end
-
-% Pan on callback
+    
+    % ___________________________Pan/Zoom___________________________ %
+    % Pan on callback
     function panOn(src, ~)
         toggleOffOthers(src, hPoleSelect, hPolesSelect, ...
-            hZeroSelect, hZerosSelect, hZoomInBtn, hZoomOutBtn);
+                hZeroSelect, hZerosSelect, ...
+                hMovePoles, hZoomInBtn, hZoomOutBtn);
         pan(hAx.Parent, 'on');
     end
-
-% Pan off callback
+    
+    % Pan off callback
     function panOff(~, ~)
         pan(hAx.Parent, 'off');
     end
-
-% Zoom in enabled callback
+    
+    % Zoom in enabled callback
     function zoomInOn(src, ~)
         toggleOffOthers(src, hPoleSelect, hPolesSelect, ...
-            hZeroSelect, hZerosSelect, ...
-            hPanBtn, hZoomOutBtn);
+                hZeroSelect, hZerosSelect, ...
+                hMovePoles, hPanBtn, hZoomOutBtn);
         z = zoom(hAx);
         z.Direction = "in";
         z.Enable = "on";
     end
-
-% Zoom in disabled callback
+    
+    % Zoom in disabled callback
     function zoomInOff(~, ~)
         z = zoom(hAx);
         z.Direction = "in";
         z.Enable = "off";
     end
-
-% Zoom out enabled callback
+    
+    % Zoom out enabled callback
     function zoomOutOn(src, ~)
         toggleOffOthers(src, hPoleSelect, hPolesSelect, ...
-            hZeroSelect, hZerosSelect, ...
-            hZoomInBtn, hPanBtn);
+                hZeroSelect, hZerosSelect, ...
+                hMovePoles, hZoomInBtn, hPanBtn);
         z = zoom(hAx);
         z.Direction = "out";
         z.Enable = "on";
     end
-
-% Zoom out disabled callback
+    
+    % Zoom out disabled callback
     function zoomOutOff(~, ~)
         z = zoom(hAx);
         z.Direction = "out";
         z.Enable = "off";
     end
-
-end %tdrlocus
+    
+end
