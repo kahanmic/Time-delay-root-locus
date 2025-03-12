@@ -57,7 +57,9 @@ D =
 \end{bmatrix}
 $$
 
-Each row in P matrix, k = 1,...,N is specific for given delay and each column l = 1,...,n specifies coefficient for given order of monomial. Coefficient l = 1 is tied to s^(n-1), ... l = n is coefficient of a constant. Values of D matrix represent delays. \
-"num" and "den" specifies numerator or denominator quasipolynomial. Numerator and denominator matrices may not have same delays.
+Each row in P matrix, i = 1,...,N is specific for given delay and each column j = 1,...,n specifies coefficient for given order of monomial. Coefficient j = 1 is tied to s^(n-1), ... j = n is coefficient of a constant. \
+"num" and "den" specifies numerator or denominator quasipolynomial. Numerator and denominator matrices must not have same delays.
+
+## Tool functions
 
 
