@@ -76,10 +76,9 @@ Most of the window is covered by complex plane with drawn root locus. It is poss
 Going from left to right, there are following functions:
 
 #### Edit transfer function ![Alt Text](images/fraction2_icon.png)
-
 You can change transfer function of the system directly in GUI, either by writing numerator and denominator directly in the string notation to corresponding windows or by loading numerator and denominator matrices from workspace.
 
-#### Changing parametric values
+#### Changing parametric values ![Alt Text](images/var_param_icon.png)
 Numerical values can be substituted by parametric notation in a form of "K...", where "..." represents any integer value ("K1", "K24" etc.). Each parametric value is initiated to value = 1. By clicking second leftmost button on the toolbar, you can easily change those values inside GUI without rewriting whole transfer function. This can be useful, for example, for easy time delay editing.
 
 #### Changing gain by dragging poles
