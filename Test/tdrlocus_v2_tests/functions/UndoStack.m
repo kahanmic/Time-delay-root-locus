@@ -1,6 +1,6 @@
 classdef UndoStack < handle
-    % UndoStack
-    % Stack of previous states of root locus
+% UndoStack
+% Stack of previous states of root locus
     properties (Access = private)
         StackRL
         StackOLPole

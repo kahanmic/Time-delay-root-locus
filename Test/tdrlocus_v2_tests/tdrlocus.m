@@ -261,7 +261,7 @@ function tdrlocus(Reg, varargin)
         end
         
         % Create matrix for denominator + K*numerator
-        [numP, denP, D] = create_rl_marix(numP, numD, denP, denD);
+        [numP, denP, D] = create_rl_matrix(numP, numD, denP, denD);
         P = denP+currGain*numP;
         
         % Compute all poles/zeros of closed/open system

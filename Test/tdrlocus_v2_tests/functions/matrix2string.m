@@ -1,4 +1,6 @@
 function poly = matrix2string(P, D)
+% Converts quasipolynomial from matrix notation to string notation
+
     [numDelays, maxOrder] = size(P);
     poly = '';
     for i = 1:numDelays

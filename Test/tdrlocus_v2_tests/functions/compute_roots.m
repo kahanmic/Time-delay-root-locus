@@ -1,5 +1,6 @@
 function polyRoots = compute_roots(reg, P, D, ds)
-% P
+% Compute roots of quasipolynomial on given region
+
     if D == 0
         polyRoots = roots(P).';
     else

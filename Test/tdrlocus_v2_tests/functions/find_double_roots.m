@@ -1,4 +1,6 @@
 function [s_r, K_r] = find_double_roots(s0, K0, numP, denP, D)
+% Finds double roots of quasipolynomial and corresponding gain value
+
     P = denP+K0*numP;
     dP = derivate_quasipolynomial(P, D);
 

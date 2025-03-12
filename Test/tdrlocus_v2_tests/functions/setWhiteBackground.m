@@ -1,4 +1,6 @@
 function newImg = setWhiteBackground(img, alpha)
+% Set white background for icons
+
     bgcolor = [1 1 1]; 
     img = im2double(img);
     alpha = im2double(alpha);

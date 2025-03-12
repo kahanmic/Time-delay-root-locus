@@ -1,4 +1,6 @@
 function newRoots = iterate_root(s0, numP, denP, D, dendP, numdP, K, dK, minStep, maxStep)
+% Find new root position for given gain change dK
+
     num = evaluate_poly(s0, numP, D, 0.1, false);
     den = evaluate_poly(s0, dendP, D, 0.1, false) + K.*evaluate_poly(s0, numdP, D, 0.1, false);
     C = -(num./den);

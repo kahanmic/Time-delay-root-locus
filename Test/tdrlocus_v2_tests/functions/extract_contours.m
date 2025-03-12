@@ -1,7 +1,6 @@
 function [lens, points] = extract_contours(contour_data)
-    % Returns contour points and length of each contour from contour matrix
+% Returns contour points and length of each contour from contour matrix
 
-    %contours = {};
     lens = [];
     points = [];
     idx = 1;
@@ -13,7 +12,6 @@ function [lens, points] = extract_contours(contour_data)
         y = contour_data(2, idx+1 : idx+numPoints); 
         points = [points, x + y.*1i];
         lens = [lens, numPoints];
-        %contours{end+1} = struct('level', level, 'x', x, 'y', y);
         idx = idx + numPoints + 1; 
     end
 end

@@ -1,4 +1,7 @@
 function [nP, dP, D] = create_rl_matrix(numP, numD, denP, denD)
+% Creates one quasipolynomial matrix notation of den + K*num from two
+% quasipolynomial matrix notations.
+
     all_delays = [numD; denD];
     nrep_delays = unique(all_delays);
     N = length(nrep_delays); % N number of delays

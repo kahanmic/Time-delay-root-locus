@@ -1,4 +1,7 @@
 function poles = draw_rl_lines_section(s0, K0, gainLim, numP, denP, D, dendP, numdP, ds, minStep, maxStep)
+% When there are gains where real poles split, computes root locus lines
+% between these gain sections
+
     poles = s0;
     cnt = 0;
     maxCnt = round(100/minStep);

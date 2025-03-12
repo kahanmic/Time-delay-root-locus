@@ -1,4 +1,6 @@
 function H = evaluate_poly(Reg, P, D, ds, is_region)
+% Evaluate quasipolynomial values for given points/meshgrid (bool is_region)
+
     N = size(P, 1);     % Number of delays
     n = size(P, 2);     % Order of the polynomial
     order = n - 1;

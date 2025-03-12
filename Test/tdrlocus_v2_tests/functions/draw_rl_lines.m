@@ -1,7 +1,8 @@
 function lines = draw_rl_lines(reg, gainLim, clZeros, clPoles, numP, denP, D, numdP, dendP, ds, minStep, maxStep)
-    K = 0;    
-    
+% Computes lines of root locus
 
+    K = 0;    
+   
     % case when poles go from infinity to open loop zeros
     if length(clZeros) > length(clPoles) 
         cnt = 0;
