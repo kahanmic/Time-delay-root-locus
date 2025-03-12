@@ -73,6 +73,43 @@ Each row in P matrix, i = 1,...,N is specific for given delay and each column j 
 Most of the window is covered by complex plane with drawn root locus. It is possible to change gain using slider in the bottom of the figure. You can also change gain by directly editing value in bottom window. By clicking "Toggle pole direction" you can visualize pole movement direction for increasing gain (K value).
 
 ### Toolbar tools
-Going from left to right, there are following tools:
+Going from left to right, there are following functions:
 
 #### Edit transfer function
+You can change transfer function of the system directly in GUI, either by writing numerator and denominator directly in the string notation to corresponding windows or by loading numerator and denominator matrices from workspace.
+
+#### Changing parametric values
+Numerical values can be substituted by parametric notation in a form of "K...", where "..." represents any integer value ("K1", "K24" etc.). Each parametric value is initiated to value = 1. By clicking second leftmost button on the toolbar, you can easily change those values inside GUI without rewriting whole transfer function. This can be useful, for example, for easy time delay editing.
+
+#### Changing gain by dragging poles
+When this function turned on, you can move poles, thus changing gain, by holding and moving poles on a complex plane.
+
+#### Select plot region
+This function opens popup figure, where drawn region can be changed inside the GUI.
+
+#### Auto adjust plot region
+This button changes drawn region to fit current section on complex plane.
+
+#### Add real pole
+Adds real pole to the system by clicking on complex plane.
+
+#### Add imaginary poles
+Adds two complex conjurates imaginary poles by clicking on complex plane.
+
+#### Add real zero
+Adds real zero to the system by clicking on complex plane.
+
+#### Add imaginary zeros
+Adds two complex conjurates imaginary zeros by clicking on complex plane.
+
+#### Pan function
+This function enables/disables pan tool.
+
+#### Zoom in function
+This function enables/disables zoom in function.
+
+#### Zoom out function
+This function enables/disables zoom out function.
+
+#### Undo button
+This button takes user back to previous state on complex plane.
