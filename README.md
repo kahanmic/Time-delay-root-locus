@@ -81,35 +81,35 @@ You can change transfer function of the system directly in GUI, either by writin
 #### Changing parametric values ![Alt Text](images/var_param_icon.png)
 Numerical values can be substituted by parametric notation in a form of "K...", where "..." represents any integer value ("K1", "K24" etc.). Each parametric value is initiated to value = 1. By clicking second leftmost button on the toolbar, you can easily change those values inside GUI without rewriting whole transfer function. This can be useful, for example, for easy time delay editing.
 
-#### Changing gain by dragging poles
+#### Changing gain by dragging poles ![Alt Text](images/move_poles_icon.png)
 When this function turned on, you can move poles, thus changing gain, by holding and moving poles on a complex plane.
 
-#### Select plot region
+#### Select plot region ![Alt Text](images/region_icon_16px.png)
 This function opens popup figure, where drawn region can be changed inside the GUI.
 
-#### Auto adjust plot region
+#### Auto adjust plot region ![Alt Text](images/region_auto_icon_18px.png)
 This button changes drawn region to fit current section on complex plane.
 
-#### Add real pole
+#### Add real pole ![Alt Text](images/pole_icon.png)
 Adds real pole to the system by clicking on complex plane.
 
-#### Add imaginary poles
+#### Add imaginary poles ![Alt Text](images/poles_icon.png)
 Adds two complex conjurates imaginary poles by clicking on complex plane.
 
-#### Add real zero
+#### Add real zero ![Alt Text](images/zero_icon.png)
 Adds real zero to the system by clicking on complex plane.
 
-#### Add imaginary zeros
+#### Add imaginary zeros ![Alt Text](images/zeros_icon.png)
 Adds two complex conjurates imaginary zeros by clicking on complex plane.
 
-#### Pan function
+#### Pan function ![Alt Text](images/pan_icon.png)
 This function enables/disables pan tool.
 
-#### Zoom in function
+#### Zoom in function ![Alt Text](images/zoom_in_icon.png)
 This function enables/disables zoom in function.
 
-#### Zoom out function
+#### Zoom out function ![Alt Text](images/zoom_out_icon.png)
 This function enables/disables zoom out function.
 
-#### Undo button
+#### Undo button ![Alt Text](images/undo_icon.png)
 This button takes user back to previous state on complex plane.
