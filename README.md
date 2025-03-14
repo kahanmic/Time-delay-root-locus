@@ -3,7 +3,7 @@ This is MATLAB tool for Root locus of time-delay systems.
 Users may use this tool for any personal project, although the tool is still in development and may not work correctly. 
 This tool works in classic MATLAB interface, no additional toolboxes are needed. 
 
-QPmR algorithm from prof. Ing. Tomáš Vyhlídal, Ph.D. is used for root finding.
+QPmR algorithm from prof. Ing. Tomáš Vyhlídal, Ph.D. is used for root finding. [[1]](#1) [[2]](#2)
 
 The tool was delepoed on MATLAB R2024b version, older version of MATLAB may not be compatible.
 
@@ -117,3 +117,6 @@ This button takes user back to previous state on complex plane.
 ## references
 <a id="1">[1]</a>
 Vyhlídal, T. – Zítek, P.: QPmR v.2 – Quasipolynomial rootfinder, algorithm and examples. to appear in Advances in Delays and Dynamics, Editors: Vyhídal T., Lafay J.F., Sipahi R., Sringer 2013.
+
+<a id="2">[2]</a>
+Vyhlídal, T. – Zítek, P.: Mapping Based Algorithm for Large-Scale Computation of Quasi-Polynomial Zeros. IEEE Transactions on Automatic Control. 2009, vol. 54, no. 1, p. 171-177. ISSN 0018-9286.
