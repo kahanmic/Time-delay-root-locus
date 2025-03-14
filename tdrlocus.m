@@ -5,7 +5,8 @@ function tdrlocus(Reg, varargin)
 % tdrlocus(Reg, numerator, denominator)
 % denominator = "2.*s+exp(-s)"
 % numP = [1; 0.0183]; numD = [0; 1]; denP = [2 0; 0 1]; denD = [0; 1];
-% tdrlocus(Reg, "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)") 
+% tdrlocus(Reg, "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)")
+% or parametrical: tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^2+6*s+5)+(s+1)*exp(-K2**s)+(5+s)*exp(-K3*s)+exp(-K4*s)")
 %
 % Created by Michael Kahanek, CTU in Prague
 % Using QPmR algorithm created by Tomas Vyhlidal, CTU in Prague
