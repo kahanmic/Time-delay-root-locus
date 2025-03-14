@@ -1,7 +1,7 @@
 # Time-delay-root-locus
 This is MATLAB tool for Root locus of time-delay systems.
-Users may use this tool for any personal project, although the tool is still in development and may not work correctly. 
-This tool works in classic MATLAB interface, no additional toolboxes are needed. 
+Users may use this tool for any personal project, although the tool is still in development and may not work correctly. Root locus may be drawn incorrectly and computation errors/incorrect parameters might not be handled yet.
+This tool works in classic MATLAB interface, but requires Control system toolbox to use functions such as Bode plot or step response.
 
 QPmR algorithm from prof. Ing. Tomáš Vyhlídal, Ph.D. is used for root finding. [[1]](#1) [[2]](#2)
 
