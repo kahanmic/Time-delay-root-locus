@@ -1,12 +1,15 @@
 function tdrlocus(Reg, varargin)
 % tdrlocus v2
+% call by: tdrlocus, tdrlocus(Reg, numerator, denominator) or tdrlocus(Reg, numP, numD, denP, denD)
 % numerator = "1+0.1.*exp(-s)"; denominator = "2.*s+exp(-s)"; Reg = [-10 5 0 50];
 % tdrlocus(Reg, numerator, denominator)
 % denominator = "2.*s+exp(-s)"
 % numP = [1; 0.0183]; numD = [0; 1]; denP = [2 0; 0 1]; denD = [0; 1];
 % tdrlocus(Reg, "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)") 
 %
-
+% Created by Michael Kahanek, CTU in Prague
+% Using QPmR algorithm created by Tomas Vyhlidal, CTU in Prague
+% http://www.cak.fs.cvut.cz/algorithms/qpmr
     %% Add path to functions
     addpath(fullfile(pwd, 'functions'));
 
