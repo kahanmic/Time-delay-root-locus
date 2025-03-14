@@ -115,9 +115,15 @@ function tdrlocus(Reg, varargin)
        Color=figColor);
     hFig.WindowButtonDownFcn = @mousePushed;
     hFig.WindowButtonUpFcn = @mouseReleased;
+    
+    rowLayout = {'1x', '1x', '1x', '1x', '16x', '1x', '1x'};
+    columnLayout = {'3x', '3x', '3x', '12x', '1x'};
 
-    myLayout = uigridlayout(hFig, RowHeight={'4x', '16x', '1x', '1x'}, ...
-        ColumnWidth={'3x', '3x', '3x', '12x', '1x'}, BackgroundColor=figColor);
+    numRows = length(rowLayout);
+    numCols = length(columnLayout);
+
+    myLayout = uigridlayout(hFig, RowHeight=rowLayout, ...
+        ColumnWidth=columnLayout, BackgroundColor=figColor);
 
     % _____________________Toolbar_____________________
 
@@ -167,8 +173,8 @@ function tdrlocus(Reg, varargin)
     % Plot axes
     hAx = uiaxes(myLayout, Color=axesColor, Box="on", XGrid="on", YGrid="on", ...
         XLim=xLimits, YLim=yLimits);
-    hAx.Layout.Column = [1 5];
-    hAx.Layout.Row = [1 2];
+    hAx.Layout.Column = [2 numCols];
+    hAx.Layout.Row = [1 numRows-2];
     hAx.XLabel.String = 'Real part';
     hAx.YLabel.String = 'Imaginary part';
     hAx.Toolbar.Visible = 'off';
@@ -182,21 +188,39 @@ function tdrlocus(Reg, varargin)
     gainSlider = uislider(myLayout, Value=log10(currGain));
     gainSlider.Limits = [log10(minSliderLim), log10(maxSliderLim)];
     gainSlider.MajorTicks = linspace(log10(minSliderLim), log10(maxSliderLim), 11);
-    gainSlider.Layout.Column = [3 4];
-    gainSlider.Layout.Row = [3 4];
+    gainSlider.Layout.Column = [3 numCols];
+    gainSlider.Layout.Row = [numRows-1 numRows];
+    
+    % Export system
+    hExportSys = uibutton(myLayout, 'push', Text='Export to Workspace', ...
+        ButtonPushedFcn=@exportSys);
+    hExportSys.Layout.Row = 2;
+    hExportSys.Layout.Column = 1;
+
+    % Step response
+    hStepRes = uibutton(myLayout, 'push', Text='Step response', ...
+        ButtonPushedFcn=@stepResponse);
+    hStepRes.Layout.Row = 3;
+    hStepRes.Layout.Column = 1;
+
+    % Bode plot
+    hBodePlot = uibutton(myLayout, 'push', Text='Bode plot', ...
+        ButtonPushedFcn=@bodePlot);
+    hBodePlot.Layout.Row = 4;
+    hBodePlot.Layout.Column = 1;    
 
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
         Limits=[0, maxSliderLim],...
         ValueChangedFcn=@editGain, Value=currGain, HorizontalAlignment='center');
     gainEdit.Layout.Column = 2;
-    gainEdit.Layout.Row = 4;
+    gainEdit.Layout.Row = numRows-1;
     
     % Show pole shift direction for added gain
     hPoleDir = uicheckbox(myLayout, Value=0, Text='Toggle pole direction', ...
         ValueChangedFcn=@togglePoleDirection);
     hPoleDir.Layout.Column = 1;
-    hPoleDir.Layout.Row = 4;
+    hPoleDir.Layout.Row = numRows-1;
 
     %% Callbacks
 
@@ -477,6 +501,34 @@ function tdrlocus(Reg, varargin)
         set(hYAxis, XData=[0 0], YData=hAx.YLim);
     end
     
+    % Export system to workspace
+    function exportSys(~,~)
+        s = tf('s');
+        charNum = char(strcat("(", matrix2string(numP, D), ")"));
+        charDen = char(strcat("(", matrix2string(denP, D), ")"));
+        sys = currGain*eval(charNum)/eval(charDen);
+        assignin('base', 'tdsys', sys);
+        clear s
+    end
+
+    function stepResponse(~, ~)
+        s = tf('s');
+        charNum = char(strcat("(", matrix2string(numP, D), ")"));
+        charDen = char(strcat("(", matrix2string(denP, D), ")"));
+        sys = eval(charNum)/eval(charDen);
+        step(feedback(sys, currGain));
+        clear s
+    end
+
+    function bodePlot(~, ~)
+        s = tf('s');
+        charNum = char(strcat("(", matrix2string(numP, D), ")"));
+        charDen = char(strcat("(", matrix2string(denP, D), ")"));
+        sys = currGain*eval(charNum)/eval(charDen);
+        bode(sys)
+        clear s
+    end
+
     % Load new Time delay transfer function
     function openTDTFPopupCallback(~, ~)
 
