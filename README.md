@@ -113,3 +113,7 @@ This function enables/disables zoom out function.
 
 #### ![Undo button](images/undo_icon.png) Undo button 
 This button takes user back to previous state on complex plane.
+
+## references
+<a id="1">[1]</a>
+Vyhlídal, T. – Zítek, P.: QPmR v.2 – Quasipolynomial rootfinder, algorithm and examples. to appear in Advances in Delays and Dynamics, Editors: Vyhídal T., Lafay J.F., Sipahi R., Sringer 2013.
