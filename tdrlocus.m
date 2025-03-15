@@ -230,10 +230,10 @@ function tdrlocus(Reg, varargin)
     hBodePlot.Layout.Column = 1;    
 
     % Add integrator
-    hBodePlot = uibutton(myLayout, 'push', Text='Add integrator', ...
+    hAddIntegrator = uibutton(myLayout, 'push', Text='Add integrator', ...
         ButtonPushedFcn=@addIntegrator);
-    hBodePlot.Layout.Row = 4;
-    hBodePlot.Layout.Column = 1; 
+    hAddIntegrator.Layout.Row = 4;
+    hAddIntegrator.Layout.Column = 1; 
 
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
