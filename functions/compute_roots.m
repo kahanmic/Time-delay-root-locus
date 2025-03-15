@@ -1,12 +1,9 @@
-function polyRoots = compute_roots(reg, P, D, ds)
+function [newDs, polyRoots] = compute_roots(reg, P, D, ds, iteration)
 % Compute roots of quasipolynomial on given region
-
     if D == 0
         polyRoots = roots(P).';
+        newDs = ds;
     else
-    if nargin < 4
-        ds = 0.1;
-    end
 
     bmin = reg(1); bmax = reg(2); wmin = reg(3); wmax = reg(4);
     beta = bmin:ds:bmax;
@@ -21,11 +18,22 @@ function polyRoots = compute_roots(reg, P, D, ds)
     rootsApprox = approximate_root_position(pointsReal, Freal, inedxCS, ds);
 
     polyRoots = newton_method(rootsApprox, P, D, 1e-6);
-    numRoots = argp_integral(reg, P, D, ds);
 
-    % if length(polyRoots) ~= numRoots
-    %     polyRoots = compute_roots(reg, P, D, ds/2);
-    % end
+    argpShift = min(abs(imag(polyRoots(imag(polyRoots) ~= 0))));
+    numRoots = argp_integral(reg, P, D, argpShift/2);
+
+    if length(polyRoots) ~= numRoots && iteration < 5
+       
+        if ds/2 > 1e-3
+            [newDs, polyRoots] = compute_roots(reg, P, D, ds/2, iteration+1);
+        end
+    else
+        newDs = ds;
+    end
+
+    if length(polyRoots) ~= numRoots 
+        polyRoots = NaN;
+    end
 
     % Sort firstly by imaginary part, then by real part
     sortedRoots = sortrows([imag(polyRoots).' real(polyRoots).'], [1 2]);

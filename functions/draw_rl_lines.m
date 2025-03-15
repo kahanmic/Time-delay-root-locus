@@ -1,8 +1,8 @@
-function lines = draw_rl_lines(reg, gainLim, clZeros, clPoles, numP, denP, D, numdP, dendP, ds, minStep, maxStep)
+function [realLim, lines] = draw_rl_lines(reg, gainLim, clZeros, clPoles, numP, denP, D, numdP, dendP, ds, minStep, maxStep)
 % Computes lines of root locus
 
     K = 0;    
-   
+    realLim = [reg(1) reg(2)];
     % case when poles go from infinity to open loop zeros
     if length(clZeros) > length(clPoles) 
         cnt = 0;
@@ -22,17 +22,23 @@ function lines = draw_rl_lines(reg, gainLim, clZeros, clPoles, numP, denP, D, nu
     else
         poles = clPoles;
     end
-    
+    size(poles)
     rePolesZeros = get_real_poles_zeros(clPoles, clZeros);
     breakpoints = [sort(find_breakpoints(reg, numP, denP, D, ds, rePolesZeros)), gainLim];
     dK = 0.1;
     for maxK = breakpoints
         poles = [poles; draw_rl_lines_section(poles(end,:), K, maxK, numP, denP, D, dendP, numdP, ds, minStep, maxStep)];
         K = maxK + dK;
+        [~, newRoots] = compute_roots(reg, denP + K*numP, D, ds);
         if K < gainLim
-            poles = [poles; compute_roots(reg, denP + K*numP, D, ds)];
+            poles = [poles; newRoots];
         end
     end
+    
+    maxLim = min([50, max(real(poles(imag(poles) <= reg(4))))+1 ]);
+    minLim = max([-50, min(real(poles(imag(poles) <= reg(4))))-1 ]);
+    realLim = [minLim, maxLim];
+
     numLines = size(poles, 2);
     lines = cell(numLines, 1);
     for i = 1:numLines

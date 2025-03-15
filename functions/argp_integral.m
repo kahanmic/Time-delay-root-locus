@@ -1,7 +1,10 @@
 function num_roots = argp_integral(Reg, P, D, ds)
 % Compute numerical argument principal integral
 
-    region = Reg + [-ds, ds, -ds, ds];
+    ds = min([ds, 0.01]);
+    enlarge = [-ds, ds, -ds, ds];
+
+    region = Reg + enlarge;
     grid_x = region(1):ds:region(2);
     grid_y = region(3):ds:region(4);
   

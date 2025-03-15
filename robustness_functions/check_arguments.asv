@@ -1,0 +1,12 @@
+function isOkay = check_arguments(varargin)
+    isOkay = true;
+    if nargin == 2
+
+    elseif nargin ==4
+        if size(varargin(1), 1) == size(varargin(2), 1) && size(varargin(2), 2) == 1 && size(varargin(3), 1) == size(varargin(4), 1) && size(varargin(4), 2) == 1
+            isOkay = true;
+        else
+            warndlg("Invalid Matrix dimensions")
+        end
+    end
+end

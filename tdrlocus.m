@@ -7,6 +7,7 @@ function tdrlocus(Reg, varargin)
 % numP = [1; 0.0183]; numD = [0; 1]; denP = [2 0; 0 1]; denD = [0; 1];
 % tdrlocus(Reg, "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)")
 % or parametrical: tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^2+6*s+5)+(s+1)*exp(-K2**s)+(5+s)*exp(-K3*s)+exp(-K4*s)")
+% tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^3+6*s^2+5*s)+(s^2+s)*exp(-K2**s)+(5*s+s^2)*exp(-K3*s)+s*exp(-K4*s)")
 %
 % Created by Michael Kahanek, CTU in Prague
 % Using QPmR algorithm created by Tomas Vyhlidal, CTU in Prague
@@ -14,6 +15,7 @@ function tdrlocus(Reg, varargin)
 
     %% Add path to functions
     addpath(fullfile(pwd, 'functions'));
+    addpath(fullfile(pwd, 'robustness_functions'));
 
     %% GUI Variables
 
@@ -61,7 +63,7 @@ function tdrlocus(Reg, varargin)
     olZeros = [];
 
     % Precision data
-    ds = 0.1;   % Precision of grid
+    ds = 1;   % Precision of grid
     maxStep = 0.5; % Max and min shift of poles for gain change
     minsStep = 0.01;
     currGain = 1; % Initial gain
@@ -79,9 +81,20 @@ function tdrlocus(Reg, varargin)
     movingPolesNow = false; % Bool that indicates if poles are moving
     
     % Region setup
-    if nargin > 0
-        reg = Reg;
-        reg(3) = max([reg(3), 0]);
+    if nargin > 0 
+        
+        if isnumeric(Reg) && all(size(Reg) == [1 4])
+            if Reg(1) < Reg(2) && Reg(3) < Reg(4)
+                reg = Reg;
+                reg(3) = max([reg(3), 0]);
+            else
+                warndlg("Minimum limit of region must be lower than maximum limit. " + ...
+                    "Region has been set to default region.")
+            end
+        else
+            warndlg("Region must be 1x4 array of numeric values. " + ...
+                "Region has been set to default region.")
+        end
     end
     xLimits = [reg(1) reg(2)];
     yLimits = [reg(3) reg(4)];
@@ -257,8 +270,10 @@ function tdrlocus(Reg, varargin)
     helpStack = UndoStack(1);
 
     if nargin > 0
-        setCurrentSystem(varargin{:});
-        drawRL;
+        if check_arguments(varargin{:})
+            setCurrentSystem(varargin{:});
+            drawRL;
+        end
     end
     
     % Saves all important info about current system
@@ -295,9 +310,22 @@ function tdrlocus(Reg, varargin)
         P = denP+currGain*numP;
         
         % Compute all poles/zeros of closed/open system
-        olZeros = compute_roots(reg, numP, D, ds);
-        olPoles = compute_roots(reg, denP, D, ds);
-        clPoles = compute_roots(reg, P, D, ds);
+        [ds1, olZeros] = compute_roots(reg, numP, D, ds, 1);
+        % disp("zeros")
+        [ds2, olPoles] = compute_roots(reg, denP, D, ds, 1);
+        % disp("poles")
+        [ds3, clPoles] = compute_roots(reg, P, D, ds, 1);
+        % disp("poles")
+        
+        ds = min([ds1, ds2, ds3, 0.1]);
+      
+        if any(isnan([real(olZeros), real(olPoles), real(clPoles)]))
+            olZeros = NaN;
+            olPoles = NaN;
+            clPoles = NaN;
+            disp("Info: couldn't compute root locus with given precision");
+        end
+
 
         % Adjust max step depending on number of poles/zeros
         maxStep = reg(4)/(10*(length(olPoles) + length(olZeros)));
@@ -317,8 +345,12 @@ function tdrlocus(Reg, varargin)
         drawnow
 
         % Draw root locus
-        lines = draw_rl_lines(reg, 1e10, olZeros, olPoles, numP, denP, D,...
+        [realLims, lines] = draw_rl_lines(reg, maxSliderLim, olZeros, olPoles, numP, denP, D,...
             numdP, dendP, ds, minsStep, maxStep);
+
+        reg(1) = realLims(1);
+        reg(2) = realLims(2);
+        
         numLines = length(lines);
         rlocusLines = cell(2*numLines, 1);
         for i = 1:numLines
@@ -326,9 +358,6 @@ function tdrlocus(Reg, varargin)
                 Color=RLLineCol, Tag='rlocus', LineWidth=1.5);
             rlocusLines{2*i} = plot(hAx, real(lines{i}), -imag(lines{i}), ...
                 Color=RLLineCol, Tag='rlocus', LineWidth=1.5);
-            reg(1) = min([reg(1), min(real(lines{i}))]);
-            reg(2) = max([reg(2), max(real(lines{i}))]);
-            reg(4) = max([reg(4), max(imag(lines{i}))]);
         end
         drawPolesZeros
         saveToStack(true)
@@ -623,7 +652,7 @@ function tdrlocus(Reg, varargin)
 
         % If shift is too big, compute poles directly
         if max(abs(newPoles - clPoles)) > maxStep*4
-            clPoles = compute_roots(reg, denP+currGain*numP, D, ds);
+            [~, clPoles] = compute_roots(reg, denP+currGain*numP, D, ds, 1);
         else
             clPoles = newPoles;
         end
@@ -635,7 +664,7 @@ function tdrlocus(Reg, varargin)
     function sliderMoved(~, event)
         currGain = 10^event.Value;
         P = denP+currGain*numP;
-        clPoles = compute_roots(reg, P, D, ds);
+        [~, clPoles] = compute_roots(reg, P, D, ds, 1);
         gainEdit.Value = currGain;
     
         updateCLPoles;
@@ -644,7 +673,7 @@ function tdrlocus(Reg, varargin)
     
     % Edit gain callback
     function editGain(src, ~)
-        clPoles = compute_roots(reg, denP+src.Value*numP, D, ds);
+        [~, clPoles] = compute_roots(reg, denP+src.Value*numP, D, ds, 1);
         if src.Value < minSliderLim
             gainSlider.Value = log10(minSliderLim);
         else
@@ -892,7 +921,7 @@ function tdrlocus(Reg, varargin)
             K = K0 + dK;
             K = min([abs(K), maxSliderLim]);
             currP = denP + K*numP;
-            clPoles = compute_roots(reg, currP, D, ds);
+            [~, clPoles] = compute_roots(reg, currP, D, ds, 1);
             %clPoles = iterate_root(clPoles, numP, denP, D, dendP, numdP, K0, dK, 0.01, 0.1);
             currGain = K;
             gainEdit.Value = currGain;
