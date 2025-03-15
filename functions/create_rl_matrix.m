@@ -11,13 +11,13 @@ function [nP, dP, D] = create_rl_matrix(numP, numD, denP, denD)
     D = nrep_delays;
     for i1 = 1:size(numP,1)
         idx = find(nrep_delays == numD(i1));
-        nP(idx, n+1-size(numP,2):end) = numP(i1,1:end);
+        nP(idx, n+1-size(numP,2):end) = nP(idx, n+1-size(numP,2):end) + numP(i1,1:end);
     end
 
     dP = zeros(N, n);
     for i2 = 1:size(denD,1)
         idx = find(nrep_delays == denD(i2));
-        dP(idx, n+1-size(denP,2):end) = denP(i2,1:end);
+        dP(idx, n+1-size(denP,2):end) = dP(idx, n+1-size(denP,2):end) + denP(i2,1:end);
     end
 
 end

@@ -14,6 +14,7 @@ classdef UndoStack < handle
         StackParamDen
         StackParamInfo
         StackReg
+        StackInitReg
         MaxSize
     end
 
@@ -33,11 +34,12 @@ classdef UndoStack < handle
             obj.StackParamDen = {};
             obj.StackParamInfo = {};
             obj.StackReg = {};
+            obj.StackInitReg = {};
         end 
 
         % Push new state to the stack
         function push(obj, rl, olpole, olzero, clpole, numP, denP, D, ...
-                gain, parnum, parden, parinfo, reg)
+                gain, parnum, parden, parinfo, reg, initreg)
             % Remove oldest item if stack storrage exceeds limit
             if length(obj.StackRL) >= obj.MaxSize
                 obj.StackRL(1) = [];
@@ -52,6 +54,7 @@ classdef UndoStack < handle
                 obj.StackParamDen(1) = [];
                 obj.StackParamInfo(1) = [];
                 obj.StackReg(1) = [];
+                obj.StackInitReg(1) = [];
             end
 
             % Add most recent state
@@ -67,11 +70,12 @@ classdef UndoStack < handle
             obj.StackParamDen{end+1} = parden;
             obj.StackParamInfo{end+1} = parinfo;
             obj.StackReg{end+1} = reg;
+            obj.StackInitReg{end+1} = initreg;
         end
        
         % Pop from stack
         function [rl, olpole, olzero, clpole, numP, denP, D, gain, ...
-                parnum, parden, parinfo, reg] = pop(obj)
+                parnum, parden, parinfo, reg, initreg] = pop(obj)
             if ~obj.isEmpty()
                 % Get data from stack
                 rl = obj.StackRL{end};
@@ -86,6 +90,7 @@ classdef UndoStack < handle
                 parden = obj.StackParamDen{end};
                 parinfo = obj.StackParamInfo{end};
                 reg = obj.StackReg{end};
+                initreg = obj.StackInitReg{end};
                 
                 % Remove from stack
                 obj.StackRL(end) = [];
@@ -100,6 +105,7 @@ classdef UndoStack < handle
                 obj.StackParamDen(end) = [];
                 obj.StackParamInfo(end) = [];
                 obj.StackReg(end) = [];
+                obj.StackInitReg(end) = [];
             end
         end
 
@@ -110,7 +116,7 @@ classdef UndoStack < handle
 
         % Undo operation
         function [rl, olpole, olzero, clpole, numP, denP, D, gain, ...
-                parnum, parden, parinfo, reg] = undo(obj)
+                parnum, parden, parinfo, reg, initreg] = undo(obj)
             if obj.isEmpty()
                 rl = [];
                 olpole = [];
@@ -124,9 +130,10 @@ classdef UndoStack < handle
                 parden = '';
                 parinfo = dictionary();
                 reg = [];
+                initreg = [];
             else
                 [rl, olpole, olzero, clpole, numP, denP, D, gain, ...
-                parnum, parden, parinfo, reg] = obj.pop();
+                parnum, parden, parinfo, reg, initreg] = obj.pop();
             end
         end
 
@@ -144,6 +151,7 @@ classdef UndoStack < handle
             obj.StackParamDen = {};
             obj.StackParamInfo = {};
             obj.StackReg = {};
+            obj.StackInitReg = {};
         end
 
         function size = getSize(obj)

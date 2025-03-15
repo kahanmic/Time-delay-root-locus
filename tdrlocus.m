@@ -6,7 +6,7 @@ function tdrlocus(Reg, varargin)
 % denominator = "2.*s+exp(-s)"
 % numP = [1; 0.0183]; numD = [0; 1]; denP = [2 0; 0 1]; denD = [0; 1];
 % tdrlocus(Reg, "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)")
-% or parametrical: tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^2+6*s+5)+(s+1)*exp(-K2**s)+(5+s)*exp(-K3*s)+exp(-K4*s)")
+% or parametrical: tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^2+6*s+5)+(s+1)*exp(-K2*s)+(5+s)*exp(-K3*s)+exp(-K4*s)")
 % tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^3+6*s^2+5*s)+(s^2+s)*exp(-K2**s)+(5*s+s^2)*exp(-K3*s)+s*exp(-K4*s)")
 %
 % Created by Michael Kahanek, CTU in Prague
@@ -63,7 +63,7 @@ function tdrlocus(Reg, varargin)
     olZeros = [];
 
     % Precision data
-    ds = 1;   % Precision of grid
+    ds = 0.1;   % Precision of grid
     maxStep = 0.5; % Max and min shift of poles for gain change
     minsStep = 0.01;
     currGain = 1; % Initial gain
@@ -98,6 +98,8 @@ function tdrlocus(Reg, varargin)
     end
     xLimits = [reg(1) reg(2)];
     yLimits = [reg(3) reg(4)];
+
+    initialReg = reg;
 
     %% Icon for toolbar setup
     % Undo button icon
@@ -212,20 +214,26 @@ function tdrlocus(Reg, varargin)
     % Export system
     hExportSys = uibutton(myLayout, 'push', Text='Export to Workspace', ...
         ButtonPushedFcn=@exportSys);
-    hExportSys.Layout.Row = 2;
+    hExportSys.Layout.Row = 1;
     hExportSys.Layout.Column = 1;
 
     % Step response
     hStepRes = uibutton(myLayout, 'push', Text='Step response', ...
         ButtonPushedFcn=@stepResponse);
-    hStepRes.Layout.Row = 3;
+    hStepRes.Layout.Row = 2;
     hStepRes.Layout.Column = 1;
 
     % Bode plot
     hBodePlot = uibutton(myLayout, 'push', Text='Bode plot', ...
         ButtonPushedFcn=@bodePlot);
-    hBodePlot.Layout.Row = 4;
+    hBodePlot.Layout.Row = 3;
     hBodePlot.Layout.Column = 1;    
+
+    % Add integrator
+    hBodePlot = uibutton(myLayout, 'push', Text='Add integrator', ...
+        ButtonPushedFcn=@addIntegrator);
+    hBodePlot.Layout.Row = 4;
+    hBodePlot.Layout.Column = 1; 
 
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
@@ -278,7 +286,6 @@ function tdrlocus(Reg, varargin)
     
     % Saves all important info about current system
     function setCurrentSystem(varargin)
-
         % Check for Matrix or string notation
         if isnumeric(varargin{1})
             numP = varargin{1};
@@ -311,11 +318,8 @@ function tdrlocus(Reg, varargin)
         
         % Compute all poles/zeros of closed/open system
         [ds1, olZeros] = compute_roots(reg, numP, D, ds, 1);
-        % disp("zeros")
         [ds2, olPoles] = compute_roots(reg, denP, D, ds, 1);
-        % disp("poles")
         [ds3, clPoles] = compute_roots(reg, P, D, ds, 1);
-        % disp("poles")
         
         ds = min([ds1, ds2, ds3, 0.1]);
       
@@ -425,26 +429,30 @@ function tdrlocus(Reg, varargin)
         stackParNum = paramNum;
         stackParDen = paramDen;
         stackReg = reg;
+        stackInitReg = initialReg;
         stackParamInfo = paramInfo;
         
         % saves to undo stack from temporary stack
         if helpStack.getSize() > 0
             [stackRLtmp, stackOLPoletmp, stackOLZerotmp, stackCLPoletmp, ...
                 stackNumPtmp, stackDenPtmp, stackDtmp, stackGaintmp, ...
-                stackParNumtmp, stackParDentmp, stackParamInfotmp, stackRegtmp] = helpStack.pop();
+                stackParNumtmp, stackParDentmp, stackParamInfotmp, ...
+                stackRegtmp, stackInitRegtmp] = helpStack.pop();
             if newState
                 undoStack.push(stackRLtmp, stackOLPoletmp, stackOLZerotmp, ...
                     stackCLPoletmp, stackNumPtmp, stackDenPtmp, stackDtmp, ...
-                    stackGaintmp, stackParNumtmp, stackParDentmp, stackParamInfotmp, stackRegtmp);
+                    stackGaintmp, stackParNumtmp, stackParDentmp, ...
+                    stackParamInfotmp, stackRegtmp, stackInitRegtmp);
             end
         end
         helpStack.push(stackRL, stackOLPole, stackOLZero, stackCLPole, ...
             stackNumP, stackDenP, stackD, stackGain, stackParNum, ...
-            stackParDen, stackParamInfo, stackReg);
+            stackParDen, stackParamInfo, stackReg, stackInitReg);
         end
     
     % Redraw root locus for updated system
     function redraw(varargin)
+        reg = initialReg
         clearCanvas
         if isnumeric(varargin{1}) % Matrix notation
             newNumP = varargin{1};
@@ -494,7 +502,7 @@ function tdrlocus(Reg, varargin)
             % Pop from stack
             [rlocusLinesData, olPolesData, olZerosData, clPolesData, ...
                 numPData, denPData, DData, gainData, parNumData, parDenData,...
-                paramInfoData, regData] = undoStack.undo();
+                paramInfoData, regData, initRegData] = undoStack.undo();
             
             % Draw if any data poped from the stack
             if ~isempty(rlocusLinesData)
@@ -520,6 +528,7 @@ function tdrlocus(Reg, varargin)
                 paramDen = parDenData;
                 paramInfo = paramInfoData;
                 reg = regData;
+                initialReg = initRegData;
     
                 drawPolesZeros
                 setCurrentSystem(numP, D, denP, D);
@@ -802,7 +811,8 @@ function tdrlocus(Reg, varargin)
         
     
         function setNewReg(~, ~)
-            reg = [hMinReal.Value hMaxReal.Value min([hMinImag.Value, 0]) hMaxImag.Value];
+            reg = [hMinReal.Value min([hMaxReal.Value, 50]) min([hMinImag.Value, 0]) hMaxImag.Value];
+            initialReg = reg;
             redrawRegion(src, false);
             close(hRegPopupFig);
         end
@@ -813,10 +823,11 @@ function tdrlocus(Reg, varargin)
     function redrawRegion(~, auto)
         if auto == true
             xMin = hAx.XLim(1);
-            xMax = hAx.XLim(2);
+            xMax =  min([hAx.XLim(2), 50]);
             yMin = max([hAx.YLim(1), 0]);
             yMax = hAx.YLim(2);
             reg = [xMin xMax yMin yMax];
+            initialReg = reg;
         end
         
         redraw(numP, denP, D)
@@ -863,7 +874,7 @@ function tdrlocus(Reg, varargin)
             orderNum = size(numP, 2) + size(newNum, 2) - 1;
             orderDen = size(denP, 2) + size(newDen, 2) - 1;
     
-            if max([orderNum, orderDen]) < 8
+            if max([orderNum, orderDen])
                 convNum = zeros(size(D, 1), orderNum);
                 convDen = zeros(size(D, 1), orderDen);
                 for i = 1:size(numP, 1)
@@ -880,6 +891,13 @@ function tdrlocus(Reg, varargin)
             movingPolesNow = true;
             set(hFig, WindowButtonMotionFcn=@holdAndChangeGain);
         end
+    end
+    
+    
+    function addIntegrator(~, ~)
+        numP = [zeros(size(numP,1), 1), numP];
+        denP = [denP, zeros(size(denP,1), 1)];
+        redraw(numP, denP, D);
     end
     
     % Stop dragging poles

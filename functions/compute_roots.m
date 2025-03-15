@@ -30,7 +30,7 @@ function [newDs, polyRoots] = compute_roots(reg, P, D, ds, iteration)
     else
         newDs = ds;
     end
-
+    
     if length(polyRoots) ~= numRoots 
         polyRoots = NaN;
     end

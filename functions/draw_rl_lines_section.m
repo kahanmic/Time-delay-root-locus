@@ -4,7 +4,7 @@ function poles = draw_rl_lines_section(s0, K0, gainLim, numP, denP, D, dendP, nu
 
     poles = s0;
     cnt = 0;
-    maxCnt = round(100/minStep);
+    maxCnt = 1e5;
     K = K0;
     while K < gainLim && cnt < maxCnt
         num = evaluate_poly(s0, numP, D, ds, false);
@@ -18,15 +18,17 @@ function poles = draw_rl_lines_section(s0, K0, gainLim, numP, denP, D, dendP, nu
     
         K = K + dK;
         
-        ds = C*dK;
-        currP = denP+K*numP;
-        s0 = s0+ds;
-        s0 = newton_method(s0, currP, D, 1e-6);
-    
-        poles = [poles; s0];
-        if gainLim >= 1e10 
-            cnt = cnt + 1;
+        if K < gainLim
+            ds = C*dK;
+            currP = denP+K*numP;
+            s0 = s0+ds;
+            s0 = newton_method(s0, currP, D, 1e-6);
+            
+            poles = [poles; s0];
         end
+   
+        cnt = cnt + 1;
+
     end
 
 end
