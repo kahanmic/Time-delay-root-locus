@@ -452,7 +452,7 @@ function tdrlocus(Reg, varargin)
     
     % Redraw root locus for updated system
     function redraw(varargin)
-        reg = initialReg
+        reg = initialReg;
         clearCanvas
         if isnumeric(varargin{1}) % Matrix notation
             newNumP = varargin{1};
