@@ -390,7 +390,6 @@ function tdrlocus(Reg, varargin)
     function updateCLPoles
         plotCLPoles.XData = [real(clPoles), real(clPoles)];
         plotCLPoles.YData = [imag(clPoles), -imag(clPoles)];
-        
         % Direction arrows
         if hPoleDir.Value
             updatePoleDirection

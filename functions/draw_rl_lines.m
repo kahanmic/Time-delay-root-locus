@@ -46,8 +46,8 @@ function [realLim, lines] = draw_rl_lines(reg, gainLim, clZeros, clPoles, numP, 
     
     tmpLines = draw_spliting_rl(sections, sectionHeighs, sectionWidths);
     
-    maxLim = min([50, max(real(tmpLines(imag(tmpLines) <= reg(4))))+1 ]);
-    minLim = max([-50, min(real(tmpLines(imag(tmpLines) <= reg(4))))-1 ]);
+    maxLim = min([50, max(real(tmpLines(imag(tmpLines) <= reg(4)))) + 1 ]);
+    minLim = max([-50, min(real(tmpLines(imag(tmpLines) <= reg(4)))) - 1 ]);
     realLim = [minLim, maxLim];
 
     numLines = size(tmpLines, 2);
