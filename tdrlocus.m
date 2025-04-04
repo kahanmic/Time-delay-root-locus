@@ -332,7 +332,7 @@ function tdrlocus(Reg, varargin)
 
 
         % Adjust max step depending on number of poles/zeros
-        maxStep = reg(4)/(10*(length(olPoles) + length(olZeros)));
+        maxStep = (reg(4) - reg(3))/(10*(length(olPoles) + length(olZeros)));
         getAdditionalInfo
     end
     

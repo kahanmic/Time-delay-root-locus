@@ -1,12 +1,12 @@
-function num_roots = argp_integral(Reg, P, D, ds)
+function num_roots = argp_integral(Reg, P, D, diff_s)
 % Compute numerical argument principal integral
 
-    ds = min([ds, 0.01]);
-    enlarge = [-ds, ds, -ds, ds];
+    diff_s = min([diff_s, 0.01]);
+    enlarge = [-diff_s, diff_s, -diff_s, diff_s];
     
     region = Reg + enlarge;
-    dsy = max([ds, (region(4)-region(3))/1e4]);
-    dsx = max([ds, (region(2)-region(1))/1e4]);
+    dsy = max([diff_s, (region(4)-region(3))/1e4]);
+    dsx = max([diff_s, (region(2)-region(1))/1e4]);
 
     grid_x = region(1):dsx:region(2);
     grid_y = region(3):dsy:region(4);
@@ -19,6 +19,6 @@ function num_roots = argp_integral(Reg, P, D, ds)
     F = evaluate_poly(cntur, P, D, NaN, false);
     dP = derivate_quasipolynomial(P, D);
     dF = evaluate_poly(cntur, dP, D, NaN, false);
-
+    
     num_roots = round(abs(real(sum((dF./F).*dS)/(2*pi*1i))));
 end
