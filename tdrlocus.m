@@ -5,9 +5,9 @@ function tdrlocus(Reg, varargin)
 % tdrlocus(Reg, numerator, denominator)
 % denominator = "2.*s+exp(-s)"
 % numP = [1; 0.0183]; numD = [0; 1]; denP = [2 0; 0 1]; denD = [0; 1];
-% tdrlocus(Reg, "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)")
+% tdrlocus([-10 5 0 50], "1+exp(-s)", "(s^2+6*s+5)+(s+1)*exp(-5*s)+(5+s)*exp(-2*s)+exp(-7*s)")
 % or parametrical: tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^2+6*s+5)+(s+1)*exp(-K2*s)+(5+s)*exp(-K3*s)+exp(-K4*s)")
-% tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^3+6*s^2+5*s)+(s^2+s)*exp(-K2**s)+(5*s+s^2)*exp(-K3*s)+s*exp(-K4*s)")
+% tdrlocus([-10 5 0 50], "1+exp(-K1*s)", "(s^3+6*s^2+5*s)+(s^2+s)*exp(-K2*s)+(5*s+s^2)*exp(-K3*s)+s*exp(-K4*s)")
 %
 % Created by Michael Kahanek, CTU in Prague
 % Using QPmR algorithm created by Tomas Vyhlidal, CTU in Prague
@@ -47,6 +47,11 @@ function tdrlocus(Reg, varargin)
     denP = 1;
     numdP = 0;
     dendP = 0;
+    
+    % System info in matrix format
+    numPsys = 1;
+    denPsys = 1;
+    Dsys = 0;
 
     % Parameters
     paramInfo = dictionary();
@@ -136,7 +141,7 @@ function tdrlocus(Reg, varargin)
     hFig.WindowButtonDownFcn = @mousePushed;
     hFig.WindowButtonUpFcn = @mouseReleased;
     
-    rowLayout = {'1x', '1x', '1x', '1x', '16x', '1x', '1x'};
+    rowLayout = {'1x', '1x', '1x', '1x', '1x', '1x', '14x', '1x', '1x'};
     columnLayout = {'3x', '3x', '3x', '12x', '1x'};
 
     numRows = length(rowLayout);
@@ -235,6 +240,18 @@ function tdrlocus(Reg, varargin)
     hAddIntegrator.Layout.Row = 4;
     hAddIntegrator.Layout.Column = 1; 
 
+    % Set system button
+    hSetSystem = uibutton(myLayout, 'push', Text='Set as system', ...
+        ButtonPushedFcn=@setAsSystem);
+    hSetSystem.Layout.Row = 5;
+    hSetSystem.Layout.Column = 1; 
+
+    % Export regulator button
+    hExportRegulator = uibutton(myLayout, 'push', Text='Export regulator', ...
+        ButtonPushedFcn=@exportRegulator);
+    hExportRegulator.Layout.Row = 6;
+    hExportRegulator.Layout.Column = 1; 
+
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
         Limits=[0, maxSliderLim],...
@@ -281,6 +298,7 @@ function tdrlocus(Reg, varargin)
         if check_arguments(varargin{:})
             setCurrentSystem(varargin{:});
             drawRL;
+            setAsSystem;
         end
     end
     
@@ -313,8 +331,9 @@ function tdrlocus(Reg, varargin)
         end
         
         % Create matrix for denominator + K*numerator
-        [numP, denP, D] = create_rl_matrix(numP, numD, denP, denD);
+        [numP, denP, D, sharedDelay] = create_rl_matrix(numP, numD, denP, denD);
         P = denP+currGain*numP;
+
         
         % Compute all poles/zeros of closed/open system
         [ds1, olZeros] = compute_roots(reg, numP, D, ds, 1);
@@ -352,8 +371,8 @@ function tdrlocus(Reg, varargin)
         [realLims, lines] = draw_rl_lines(reg, maxSliderLim, olZeros, olPoles, numP, denP, D,...
             numdP, dendP, ds, minsStep, maxStep);
 
-        reg(1) = realLims(1);
-        reg(2) = realLims(2);
+        % reg(1) = realLims(1);
+        % reg(2) = realLims(2);
         
         numLines = length(lines);
         rlocusLines = cell(2*numLines, 1);
@@ -553,6 +572,36 @@ function tdrlocus(Reg, varargin)
         clear s
     end
 
+    function exportRegulator(~, ~)
+        s = sym('s');
+        numSym = 0;
+        for i = 1:size(numP,1)
+            numSym = numSym + poly2sym(numP(i,:), s) * exp(-s * D(i));
+        end
+
+        sysNumSym = 0;
+        for i = 1:size(numPsys,1)
+            sysNumSym = sysNumSym + poly2sym(numPsys(i,:), s) * exp(-s * Dsys(i));
+        end
+        
+        strNumReg = strcat("(", string(simplify(numSym/sysNumSym)), ")");
+
+        denSym = 0;
+        for i = 1:size(denP,1)
+            denSym = denSym + poly2sym(denP(i,:), s) * exp(-s * D(i));
+        end
+
+        sysDenSym = 0;
+        for i = 1:size(denPsys,1)
+            sysDenSym = sysDenSym + poly2sym(denPsys(i,:), s) * exp(-s * Dsys(i));
+        end
+        strDenReg = strcat("(", string(simplify(denSym/sysDenSym)), ")");
+        s = tf('s');
+        regulator = currGain*eval(strNumReg)/eval(strDenReg);
+        assignin('base', 'tdreg', regulator);
+        clear s
+    end
+
     function stepResponse(~, ~)
         s = tf('s');
         charNum = char(strcat("(", matrix2string(numP, D), ")"));
@@ -569,6 +618,12 @@ function tdrlocus(Reg, varargin)
         sys = currGain*eval(charNum)/eval(charDen);
         bode(sys)
         clear s
+    end
+
+    function setAsSystem(~, ~)
+        numPsys = numP;
+        denPsys = denP;
+        Dsys= D;
     end
 
     % Load new Time delay transfer function
@@ -681,11 +736,12 @@ function tdrlocus(Reg, varargin)
     
     % Edit gain callback
     function editGain(src, ~)
-        [~, clPoles] = compute_roots(reg, denP+src.Value*numP, D, ds, 1);
+        currGain = src.Value;
+        [~, clPoles] = compute_roots(reg, denP+currGain*numP, D, ds, 1);
         if src.Value < minSliderLim
             gainSlider.Value = log10(minSliderLim);
         else
-            gainSlider.Value = log10(src.Value);
+            gainSlider.Value = log10(currGain);
         end
         updateCLPoles;
     end
@@ -863,11 +919,11 @@ function tdrlocus(Reg, varargin)
             if selectedMode == "RealPole"
                 newDen = poly(x);
             elseif selectedMode == "ImagPole"
-                newDen = poly([x+y*1i, x-y*1i]);
+                newDen = round(poly([x+y*1i, x-y*1i]), 2);
             elseif selectedMode == "RealZero"
                 newNum = poly(x);
             elseif selectedMode == "ImagZero"
-                newNum = poly([x+y*1i, x-y*1i]);
+                newNum = round(poly([x+y*1i, x-y*1i]), 2);
             end
             
             orderNum = size(numP, 2) + size(newNum, 2) - 1;

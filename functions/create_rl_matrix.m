@@ -1,11 +1,16 @@
-function [nP, dP, D] = create_rl_matrix(numP, numD, denP, denD)
+function [nP, dP, D, sharedDelay] = create_rl_matrix(numP, numD, denP, denD)
 % Creates one quasipolynomial matrix notation of den + K*num from two
 % quasipolynomial matrix notations.
 
-    all_delays = [numD; denD];
+    all_delays = sort([numD; denD]);
     nrep_delays = unique(all_delays);
     N = length(nrep_delays); % N number of delays
     n = max([size(numP, 2), size(denP, 2)]);
+    
+    changeIdx = [find(diff(all_delays) ~= 0); length(all_delays)];
+    startIdx = [1; changeIdx(1:end-1) + 1];
+    sharedDelay = (changeIdx - startIdx + 1) > 1;
+
 
     nP = zeros(N, n);
     D = nrep_delays;

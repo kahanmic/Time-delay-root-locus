@@ -8,18 +8,23 @@ function tmpLines = draw_spliting_rl(sections, sectionHeighs, sectionWidths)
         currSection = sections{i};
         endCurr = endPrev + sectionHeighs(i);
         prevSection = tmpLines(1:endPrev,1:prevWidth);
-
-
-        if length(currSection(end,:)) < length(prevSection(end,:))
+   
+        if length(currSection(end,:)) < length(prevSection(end,:)) % good
             numJoins = length(prevSection(end,:)) - length(currSection(end,:));
-            diffs = abs(prevSection(end,1:end-1) - prevSection(end,2:end));
-            k = 0.1;
-            while length(diffs(diffs < k)) < numJoins && k < 1
-                k = k+0.1;
+            prevPoles = prevSection(end,:);
+            nearRealIdxs = find(imag(prevPoles) < 0.2);
+            
+            % find two closest poles near rela axis
+            for k = 0.1:0.1:3
+                potIdxs = find(abs(diff(prevPoles)) < k);
+                if sum(ismember(potIdxs, nearRealIdxs)) >= numJoins
+                    idxs = potIdxs(ismember(potIdxs, nearRealIdxs));
+                    break
+                end
             end
-            idxs = find(diffs < k);
+       
             for idx = idxs(end:-1:1)
-                currSection = [currSection(:,1:idx-1), currSection(:,idx), currSection(:,idx:end)];
+                currSection = [currSection(:,1:idx), currSection(:,idx), currSection(:,idx+1:end)];
             end
             tmpLines(endPrev+1:endCurr, 1:size(currSection, 2)) = currSection;
 
