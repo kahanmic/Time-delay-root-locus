@@ -141,7 +141,7 @@ function tdrlocus(Reg, varargin)
     hFig.WindowButtonDownFcn = @mousePushed;
     hFig.WindowButtonUpFcn = @mouseReleased;
     
-    rowLayout = {'1x', '1x', '1x', '1x', '1x', '1x', '14x', '1x', '1x'};
+    rowLayout = {'1x', '1x', '1x', '1x', '1x', '1x', '1x', '13x', '1x', '1x'};
     columnLayout = {'3x', '3x', '3x', '12x', '1x'};
 
     numRows = length(rowLayout);
@@ -234,12 +234,6 @@ function tdrlocus(Reg, varargin)
     hBodePlot.Layout.Row = 3;
     hBodePlot.Layout.Column = 1;    
 
-    % Add integrator
-    hAddIntegrator = uibutton(myLayout, 'push', Text='Add integrator', ...
-        ButtonPushedFcn=@addIntegrator);
-    hAddIntegrator.Layout.Row = 4;
-    hAddIntegrator.Layout.Column = 1; 
-
     % Set system button
     hSetSystem = uibutton(myLayout, 'push', Text='Set as system', ...
         ButtonPushedFcn=@setAsSystem);
@@ -251,6 +245,12 @@ function tdrlocus(Reg, varargin)
         ButtonPushedFcn=@exportRegulator);
     hExportRegulator.Layout.Row = 6;
     hExportRegulator.Layout.Column = 1; 
+
+    % Add regulator
+    hAddRegulator = uibutton(myLayout, 'push', Text='Add regulator', ...
+        ButtonPushedFcn=@addRegulator);
+    hAddRegulator.Layout.Row = 4;
+    hAddRegulator.Layout.Column = 1; 
 
     % Gain edit field
     gainEdit = uieditfield(myLayout, 'numeric',...
@@ -626,6 +626,32 @@ function tdrlocus(Reg, varargin)
         Dsys= D;
     end
 
+    function addRegulator(~, ~)
+        hAddRegPopupFig = uifigure(Name='Edit Time delay transfer function', ...
+            Position=[500, 300, 300, 150]);
+        hAddRegLabel = uilabel(hAddRegPopupFig, Text='Choose regulator transfer function', ...
+            Position=[50 125 200 22], HorizontalAlignment="center");
+        hNumEditField = uieditfield(hAddRegPopupFig, ...
+            Position=[20 90 260 22]);
+        hFraction = uilabel(hAddRegPopupFig, Text=repmat('_', 1, 100), ...
+            Position=[20 75 260 22]);
+        hFraction.WordWrap = 'on';
+        hDenEditField = uieditfield(hAddRegPopupFig, ...
+            Position=[20 55 260 22]);
+        hEditButton = uibutton(hAddRegPopupFig, Text='Add', ...
+            Position=[125 17 50 22], ButtonPushedFcn=@addNewRegulator); 
+
+        hNumEditField.Value = "1";
+        hDenEditField.Value = "1";        
+
+    function addNewRegulator(~,~)
+            newNum = strcat("(", matrix2string(numP, D), ")*(", string(hNumEditField.Value), ")");
+            newDen = strcat("(", matrix2string(denP, D), ")*(", string(hDenEditField.Value), ")");
+            redraw(newNum, newDen);
+            close(hAddRegPopupFig);
+        end
+    end
+
     % Load new Time delay transfer function
     function openTDTFPopupCallback(~, ~)
 
@@ -947,14 +973,7 @@ function tdrlocus(Reg, varargin)
             set(hFig, WindowButtonMotionFcn=@holdAndChangeGain);
         end
     end
-    
-    
-    function addIntegrator(~, ~)
-        numP = [zeros(size(numP,1), 1), numP];
-        denP = [denP, zeros(size(denP,1), 1)];
-        redraw(numP, denP, D);
-    end
-    
+        
     % Stop dragging poles
     function mouseReleased(~, ~)
         movingPolesNow = false;
