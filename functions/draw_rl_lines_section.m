@@ -6,6 +6,7 @@ function poles = draw_rl_lines_section(s0, K0, gainLim, numP, denP, D, dendP, nu
     cnt = 0;
     maxCnt = 1e5;
     K = K0;
+    
     while K < gainLim && cnt < maxCnt
         num = evaluate_poly(s0, numP, D, ds, false);
         den = evaluate_poly(s0, dendP, D, ds, false) + K.*evaluate_poly(s0, numdP, D, ds, false);

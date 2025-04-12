@@ -15,6 +15,9 @@ classdef UndoStack < handle
         StackParamInfo
         StackReg
         StackInitReg
+        StackNumPsys
+        StackDenPsys
+        StackDsys        
         MaxSize
     end
 
@@ -35,11 +38,15 @@ classdef UndoStack < handle
             obj.StackParamInfo = {};
             obj.StackReg = {};
             obj.StackInitReg = {};
+            obj.StackNumPsys = {};
+            obj.StackDenPsys = {};
+            obj.StackDsys = {};
         end 
 
         % Push new state to the stack
         function push(obj, rl, olpole, olzero, clpole, numP, denP, D, ...
-                gain, parnum, parden, parinfo, reg, initreg)
+                gain, parnum, parden, parinfo, reg, initreg, numPsys, ...
+                denPsys, Dsys)
             % Remove oldest item if stack storrage exceeds limit
             if length(obj.StackRL) >= obj.MaxSize
                 obj.StackRL(1) = [];
@@ -55,6 +62,9 @@ classdef UndoStack < handle
                 obj.StackParamInfo(1) = [];
                 obj.StackReg(1) = [];
                 obj.StackInitReg(1) = [];
+                obj.StackNumPsys(1) = [];
+                obj.StackDenPsys(1) = [];
+                obj.StackDsys(1) = [];                
             end
 
             % Add most recent state
@@ -71,11 +81,15 @@ classdef UndoStack < handle
             obj.StackParamInfo{end+1} = parinfo;
             obj.StackReg{end+1} = reg;
             obj.StackInitReg{end+1} = initreg;
+            obj.StackNumPsys{end+1} = numPsys;
+            obj.StackDenPsys{end+1} = denPsys;
+            obj.StackDsys{end+1} = Dsys;               
         end
        
         % Pop from stack
         function [rl, olpole, olzero, clpole, numP, denP, D, gain, ...
-                parnum, parden, parinfo, reg, initreg] = pop(obj)
+                parnum, parden, parinfo, reg, initreg, numPsys, denPsys, ...
+                Dsys] = pop(obj)
             if ~obj.isEmpty()
                 % Get data from stack
                 rl = obj.StackRL{end};
@@ -91,7 +105,10 @@ classdef UndoStack < handle
                 parinfo = obj.StackParamInfo{end};
                 reg = obj.StackReg{end};
                 initreg = obj.StackInitReg{end};
-                
+                numPsys = obj.StackNumPsys{end};
+                denPsys = obj.StackDenPsys{end};
+                Dsys = obj.StackDsys{end};
+   
                 % Remove from stack
                 obj.StackRL(end) = [];
                 obj.StackOLPole(end) = [];
@@ -106,6 +123,9 @@ classdef UndoStack < handle
                 obj.StackParamInfo(end) = [];
                 obj.StackReg(end) = [];
                 obj.StackInitReg(end) = [];
+                obj.StackNumPsys(end) = [];
+                obj.StackDenPsys(end) = [];
+                obj.StackDsys(end) = [];
             end
         end
 
@@ -116,7 +136,8 @@ classdef UndoStack < handle
 
         % Undo operation
         function [rl, olpole, olzero, clpole, numP, denP, D, gain, ...
-                parnum, parden, parinfo, reg, initreg] = undo(obj)
+                parnum, parden, parinfo, reg, initreg, numPsys, denPsys, ...
+                Dsys] = undo(obj)
             if obj.isEmpty()
                 rl = [];
                 olpole = [];
@@ -131,9 +152,13 @@ classdef UndoStack < handle
                 parinfo = dictionary();
                 reg = [];
                 initreg = [];
+                numPsys = 1;
+                denPsys = 1;
+                Dsys = 0;
             else
                 [rl, olpole, olzero, clpole, numP, denP, D, gain, ...
-                parnum, parden, parinfo, reg, initreg] = obj.pop();
+                parnum, parden, parinfo, reg, initreg, numPsys, ...
+                denPsys, Dsys] = obj.pop();
             end
         end
 
@@ -152,6 +177,9 @@ classdef UndoStack < handle
             obj.StackParamInfo = {};
             obj.StackReg = {};
             obj.StackInitReg = {};
+            obj.StackNumPsys = {};
+            obj.StackDenPsys = {};
+            obj.StackDsys = {};
         end
 
         function size = getSize(obj)

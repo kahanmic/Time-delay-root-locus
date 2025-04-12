@@ -331,7 +331,8 @@ function tdrlocus(Reg, varargin)
         end
         
         % Create matrix for denominator + K*numerator
-        [numP, denP, D, sharedDelay] = create_rl_matrix(numP, numD, denP, denD);
+        [numP, denP, D] = create_rl_matrix(numP, numD, denP, denD);
+
         P = denP+currGain*numP;
 
         
@@ -367,8 +368,8 @@ function tdrlocus(Reg, varargin)
         set(hFig, "Pointer", "watch"); % Waiting cursor
         drawnow
 
-        % Draw root locus
-        [realLims, lines] = draw_rl_lines(reg, maxSliderLim, olZeros, olPoles, numP, denP, D,...
+        % Draw root locus    
+        [realLims, lines] = draw_rl_lines(reg, maxSliderLim, olZeros, olPoles, length(clPoles), numP, denP, D,...
             numdP, dendP, ds, minsStep, maxStep);
 
         % reg(1) = realLims(1);
@@ -449,23 +450,29 @@ function tdrlocus(Reg, varargin)
         stackReg = reg;
         stackInitReg = initialReg;
         stackParamInfo = paramInfo;
+        stackNumPsys = numPsys;
+        stackDenPsys = denPsys;
+        stackDsys = Dsys;
         
         % saves to undo stack from temporary stack
         if helpStack.getSize() > 0
             [stackRLtmp, stackOLPoletmp, stackOLZerotmp, stackCLPoletmp, ...
                 stackNumPtmp, stackDenPtmp, stackDtmp, stackGaintmp, ...
                 stackParNumtmp, stackParDentmp, stackParamInfotmp, ...
-                stackRegtmp, stackInitRegtmp] = helpStack.pop();
+                stackRegtmp, stackInitRegtmp, stackNumPsys, ...
+                stackDenPsys, stackDsys] = helpStack.pop();
             if newState
                 undoStack.push(stackRLtmp, stackOLPoletmp, stackOLZerotmp, ...
                     stackCLPoletmp, stackNumPtmp, stackDenPtmp, stackDtmp, ...
                     stackGaintmp, stackParNumtmp, stackParDentmp, ...
-                    stackParamInfotmp, stackRegtmp, stackInitRegtmp);
+                    stackParamInfotmp, stackRegtmp, stackInitRegtmp, ...
+                    stackNumPsys, stackDenPsys, stackDsys);
             end
         end
         helpStack.push(stackRL, stackOLPole, stackOLZero, stackCLPole, ...
             stackNumP, stackDenP, stackD, stackGain, stackParNum, ...
-            stackParDen, stackParamInfo, stackReg, stackInitReg);
+            stackParDen, stackParamInfo, stackReg, stackInitReg, ...
+            stackNumPsys, stackDenPsys, stackDsys);
         end
     
     % Redraw root locus for updated system
@@ -520,7 +527,8 @@ function tdrlocus(Reg, varargin)
             % Pop from stack
             [rlocusLinesData, olPolesData, olZerosData, clPolesData, ...
                 numPData, denPData, DData, gainData, parNumData, parDenData,...
-                paramInfoData, regData, initRegData] = undoStack.undo();
+                paramInfoData, regData, initRegData, numPsysData, ...
+                denPsysData, DsysData] = undoStack.undo();
             
             % Draw if any data poped from the stack
             if ~isempty(rlocusLinesData)
@@ -547,6 +555,9 @@ function tdrlocus(Reg, varargin)
                 paramInfo = paramInfoData;
                 reg = regData;
                 initialReg = initRegData;
+                numPsys = numPsysData;
+                denPsys = denPsysData;
+                Dsys = DsysData;
     
                 drawPolesZeros
                 setCurrentSystem(numP, D, denP, D);
@@ -638,18 +649,27 @@ function tdrlocus(Reg, varargin)
         hFraction.WordWrap = 'on';
         hDenEditField = uieditfield(hAddRegPopupFig, ...
             Position=[20 55 260 22]);
-        hEditButton = uibutton(hAddRegPopupFig, Text='Add', ...
-            Position=[125 17 50 22], ButtonPushedFcn=@addNewRegulator); 
+        hAddButton = uibutton(hAddRegPopupFig, Text='Add', ...
+            Position=[50 17 50 22], ButtonPushedFcn=@addNewRegulator); 
+        hChangeButton = uibutton(hAddRegPopupFig, Text='Change', ...
+            Position=[200 17 50 22], ButtonPushedFcn=@changeNewRegulator); 
 
         hNumEditField.Value = "1";
         hDenEditField.Value = "1";        
 
-    function addNewRegulator(~,~)
+        function addNewRegulator(~,~)
             newNum = strcat("(", matrix2string(numP, D), ")*(", string(hNumEditField.Value), ")");
             newDen = strcat("(", matrix2string(denP, D), ")*(", string(hDenEditField.Value), ")");
             redraw(newNum, newDen);
             close(hAddRegPopupFig);
         end
+
+        function changeNewRegulator(~,~)
+            newNum = strcat("(", matrix2string(numPsys, Dsys), ")*(", string(hNumEditField.Value), ")");
+            newDen = strcat("(", matrix2string(denPsys, Dsys), ")*(", string(hDenEditField.Value), ")");
+            redraw(newNum, newDen);
+            close(hAddRegPopupFig);
+        end        
     end
 
     % Load new Time delay transfer function

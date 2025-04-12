@@ -9,17 +9,31 @@ function [P, D] = string2matrix(str)
     % find unique exponentials
     exps = str2sym(regexp(string(polyExpanded), 'exp\([^)]*\)', 'match'));
     unique_exps = unique(exps);
-
-    polyCollected = collect(polyExpanded, unique_exps);
-    qpolys = children(polyCollected);
-    [qpolys, expDel] = testConversion(polyCollected);
+    
+    if isempty(unique_exps) % if classic polynomial
+        qpolys = {polyExpanded};
+        expDel = 0;
+    elseif length(unique_exps) == 1 % if poly*exp(...) vs poly+exp(...)
+        delTest = getDelay(unique_exps);
+        isSimpleQpoly = isempty(regexp(string(simplify(polyExpanded/exp(-delTest*s))), 'exp\([^)]*\)', 'match'));
+        if isSimpleQpoly
+            qpolys = {polyExpanded};
+            expDel = delTest;
+        else
+            polyCollected = collect(polyExpanded, unique_exps);
+            [qpolys, expDel] = testConversion(polyCollected);
+        end
+    else
+        polyCollected = collect(polyExpanded, unique_exps);
+        [qpolys, expDel] = testConversion(polyCollected);
+    end
+    
     numDelays = length(qpolys);
     
     % delay values
     widthP = 0;
     for i = 1:numDelays
         currDel = expDel(i);
-
         polyInfo(i).delay = currDel;
         currCoef = double(coeffs(simplify(qpolys{i}/exp(-currDel*s)), 'All'));
         if length(currCoef) > widthP
@@ -65,19 +79,23 @@ function [P, D] = string2matrix(str)
                 terms{i} = str2sym(strTerm);
                 expDels(end+1) = delSum;
             else
-                strDel = erase(string(unique_matches),  ["exp(", ")", "s", "*"]);
-                if strDel == "-"
-                    del = 1;
-                elseif strDel == ""
-                    del = -1;
-                elseif ~isempty(strDel)
-                    del = -double(strDel);
-                else
-                    del = 0;
-                end
+                del = getDelay(unique_matches);
                 expDels(end+1) = del;
                 k = k+1;
             end 
+        end
+    end
+
+    function del = getDelay(expTerm)
+        strDel = erase(string(expTerm),  ["exp(", ")", "s", "*"]);
+        if strDel == "-"
+            del = 1;
+        elseif strDel == ""
+            del = -1;
+        elseif ~isempty(strDel)
+            del = -double(strDel);
+        else
+            del = 0;
         end
     end
 end
