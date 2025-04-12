@@ -13,9 +13,10 @@ function breakpoints = find_breakpoints(Reg, numP, denP, D, ds, rePolesZeros)
         end
         
         [K0, isDoublePoles] =  contains_double_poles([minLim maxLim -0.01 0.01], numP, denP, D, ds);
+        K0 = 0;
         if isDoublePoles
             s0 = (minLim + maxLim)/2;
-            [s_r, K_r] = find_double_roots(s0, K0, numP, denP, D);
+            [s_r, K_r] = find_double_roots(s0, K0, numP, denP, D, 1);
             if K_r > 0
                 breakpoints = [breakpoints, K_r];
             end

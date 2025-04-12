@@ -340,7 +340,7 @@ function tdrlocus(Reg, varargin)
         [ds1, olZeros] = compute_roots(reg, numP, D, ds, 1);
         [ds2, olPoles] = compute_roots(reg, denP, D, ds, 1);
         [ds3, clPoles] = compute_roots(reg, P, D, ds, 1);
-        
+
         ds = min([ds1, ds2, ds3, 0.1]);
       
         if any(isnan([real(olZeros), real(olPoles), real(clPoles)]))

@@ -1,45 +1,47 @@
 function [realLim, lines] = draw_rl_lines(reg, gainLim, olZeros, olPoles, numClPoles, numP, denP, D, numdP, dendP, ds, minStep, maxStep)
 % Computes lines of root locus
-
-    K = 0;    
+    maxStep = min([maxStep, 1]);
     rePolesZeros = get_real_poles_zeros(olPoles, olZeros);
     breakpoints = [sort(find_breakpoints(reg, numP, denP, D, ds, rePolesZeros)), gainLim];
-   
+    [~, K] = get_num_of_branches(reg, numP, denP, D, ds);
+
     % case when poles go from infinity to open loop zeros
-    if length(olZeros) > length(olPoles)
-        cnt = 0;
-        dK = 1e-8;
-        %reg(1) = -50;
-        [~, currRoots] = compute_roots(reg, denP+K*numP, D, ds, 1);
-        while length(currRoots) < (length(olZeros) - length(breakpoints) + 1) && cnt < 1e5 % not sure about < (...)
-            if mod(cnt, 10) == 0
-                dK = dK*10;
-            end
-            K = K+dK;
-            [~, currRoots] = compute_roots(reg, denP+K*numP, D, ds, 1);
-            cnt = cnt+1;
-        end
-        poles = currRoots;
-        %reg(1) = min(real(poles));
-    elseif length(olPoles) < numClPoles
-        cnt = 0;
-        dK = 1e-8;
-        %reg(1) = -50;
-        [~, currRoots] = compute_roots(reg, denP+K*numP, D, ds, 1);
-        while length(currRoots) < numClPoles && cnt < 1e5 % not sure about < (...)
-            if mod(cnt, 10) == 0
-                dK = dK*10;
-            end
-            K = K+dK;
-            [~, currRoots] = compute_roots(reg, denP+K*numP, D, ds, 1);
-            cnt = cnt+1;
-        end
-        poles = currRoots;
-    else
-        poles = olPoles;
-    end
-   
-    dK = 0.1;
+    % if length(olZeros) > length(olPoles)
+    %     cnt = 0;
+    %     dK = 1e-6;
+    %     %reg(1) = -50;
+    %     [~, currRoots] = compute_roots(reg, denP+K*numP, D, ds, 1);
+    %     while length(currRoots) < (length(olZeros) - length(breakpoints) + 1) && cnt < 1e5 % not sure about < (...)
+    %         if mod(cnt, 10) == 0
+    %             dK = dK*10;
+    %         end
+    %         K = K+dK;
+    %         [~, currRoots] = compute_roots(reg, denP+K*numP, D, ds, 1);
+    %         cnt = cnt+1;
+    %     end
+    %     poles = currRoots;
+    %     %reg(1) = min(real(poles));
+    % elseif length(olPoles) < numClPoles
+    %     cnt = 0;
+    %     dK = 1e-6;
+    %     %reg(1) = -50;
+    %     [~, currRoots] = compute_roots(reg, denP+K*numP, D, ds, 1);
+    %     while length(currRoots) < numClPoles && cnt < 1e5 % not sure about < (...)
+    %         if mod(cnt, 10) == 0
+    %             dK = dK*10;
+    %         end
+    %         K = K+dK;
+    %         [~, currRoots] = compute_roots(reg, denP+K*numP, D, ds, 1);
+    %         cnt = cnt+1;
+    %     end
+    %     poles = currRoots;
+    % else
+    %     poles = olPoles;
+    % end
+    K
+    [~, poles] = compute_roots(reg, denP+K*numP, D, ds, 1)
+
+    dK = 0.01;
     sections = cell(size(breakpoints)); % break lines into sections
     sectionHeighs = zeros(size(breakpoints));
     sectionWidths = zeros(size(breakpoints));   

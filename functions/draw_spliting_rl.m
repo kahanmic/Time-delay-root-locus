@@ -30,14 +30,24 @@ function tmpLines = draw_spliting_rl(sections, sectionHeighs, sectionWidths)
 
         elseif length(currSection(end,:)) > length(prevSection(end,:)) % splitting, hasn't been tested yet
             numSplits = length(currSection(end,:)) - length(prevSection(end,:));
-            diffs = abs(currSection(1,1:end-1) - currSection(1,2:end));
-            k = 0.1;
-            while length(diffs(diffs < k)) < numSplits && k < 1
-                k = k+0.1;
-            end        
-            idxs = find(diffs < k);
+            prevPoles = prevSection(end,:);
+
+            for k1 = 0.1:0.1:2
+                if ~isempty(find(imag(prevPoles) < k1))
+                    nearRealIdxs = find(imag(prevPoles) < k1);
+                    for k2 = 0.1:0.1:2
+                        diffs = diff(currSection(1,:));
+                        potIdxs = find(diffs < k2);
+                        if sum(ismember(potIdxs, nearRealIdxs)) >= numSplits
+                            idxs = potIdxs(ismember(potIdxs, nearRealIdxs));
+                            break
+                        end
+                    end
+                end
+            end
+            
             for idx = idxs(end:-1:1)
-                tmpLines = [tmpLines(:,1:idx), tmpLines(:,idx+1), tmpLines(:,idx+1:end)];
+                tmpLines = [tmpLines(:,1:idx), tmpLines(:,idx), tmpLines(:,idx+1:end)];
             end
             prevWidth = prevWidth + numSplits;
             tmpLines(endPrev+1:endCurr, 1:size(currSection, 2)) = currSection;
