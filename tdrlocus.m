@@ -379,7 +379,7 @@ function tdrlocus(Reg, varargin)
             s0{i} = olPoles(i);
         end
         [branches1, branches2] = drawRLbranches(s0, KmaxBranches, ...
-            breakpoints, maxSliderLim, numP, denP, D, dendP, numdP, 0.1, maxStep, reg);
+            breakpoints, maxSliderLim, numP, denP, D, dendP, numdP, 0.05, maxStep, reg);
 
         % reg(1) = realLims(1);
         % reg(2) = realLims(2);

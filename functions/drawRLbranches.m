@@ -37,7 +37,7 @@ function [poles, splits] = drawRLbranches(initPoles, KmaxBranches, breakpoints, 
                     currP = denP+K*numP;
                     s = s+ds;
                     s = newton_method(s, currP, D, 1e-6); % Approx
-                    [~, rts] = compute_roots(reg, denP+K*numP, D, precisionQPmR, 1); %QPmR
+                    [~, rts] = compute_roots(reg, denP+K*numP, D, precisionQPmR, 1) %QPmR
                     newRts = rearange(s, rts); % Match previous approx 
                     poles = addNewPoles(poles, currPoleMat); % Add previous points to branches
                     currPoleMat = newRts;
@@ -88,6 +88,8 @@ function [poles, splits] = drawRLbranches(initPoles, KmaxBranches, breakpoints, 
     % Add different number of poles
     function newPoles = addNewPoles(oldPoles, addedPolesMat)
         i = 1;
+        oldPoles
+        addedPolesMat
         while i <= length(oldPoles)
             oldPoles{i}(end+1:end+size(addedPolesMat, 1)) = addedPolesMat(:,i);
             i = i+1;
