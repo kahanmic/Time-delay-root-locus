@@ -369,13 +369,24 @@ function tdrlocus(Reg, varargin)
         drawnow
 
         % Draw root locus    
-        [realLims, lines] = draw_rl_lines(reg, maxSliderLim, olZeros, olPoles, length(clPoles), numP, denP, D,...
-            numdP, dendP, ds, minsStep, maxStep);
+        % [realLims, lines] = draw_rl_lines(reg, maxSliderLim, olZeros, olPoles, length(clPoles), numP, denP, D,...
+        %     numdP, dendP, ds, minsStep, maxStep);
+        [~, KmaxBranches] = get_num_branches(reg, numP, denP, D, ds);
+        rePolesZeros = get_real_poles_zeros(olPoles, olZeros);
+        breakpoints = sort(find_breakpoints(reg, numP, denP, D, ds, rePolesZeros));
+        s0 = cell(size(olPoles));
+        for i =1:length(s0)
+            s0{i} = olPoles(i);
+        end
+        [branches1, branches2] = drawRLbranches(s0, KmaxBranches, ...
+            breakpoints, maxSliderLim, numP, denP, D, dendP, numdP, 0.1, maxStep, reg);
 
         % reg(1) = realLims(1);
         % reg(2) = realLims(2);
         
-        numLines = length(lines);
+        % numLines = length(lines);
+        numLines = length(branches1) + length(branches2);
+        lines = [branches1, branches2];
         rlocusLines = cell(2*numLines, 1);
         for i = 1:numLines
             rlocusLines{2*i-1} = plot(hAx, real(lines{i}), imag(lines{i}), ...
