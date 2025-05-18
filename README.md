@@ -1,35 +1,39 @@
 # Time-delay-root-locus
-This is MATLAB tool for Root locus of time-delay systems.
-Users may use this tool for any personal project, although the tool is still in development and may not work correctly. Root locus lines might not appear correctly and error handling is not resolved yet.
-This tool works in classic MATLAB interface, but for functions such as export, bode plot and step response, Control system toolbox is needed.
-
-QPmR algorithm from prof. Ing. Tomáš Vyhlídal, Ph.D. is used for root finding. [[1]](#1) [[2]](#2)
+This is MATLAB tool for Root-locus of time-delay systems.
+The tool is freely available to the public. As development is ongoing, occasional issues in plotting or GUI functionality may still occur.
+The tool operates within the standard MATLAB interface and requires the Symbolic Math Toolbox and Control System Toolbox. It utilizes the QPmR algorithm developed by Prof. Ing. Tomáš Vyhlídal, Ph.D. [[1]](#1) [[2]](#2).
 
 The tool was delepoed on MATLAB R2024b version, older version of MATLAB may not be compatible.
 
 ## How to work with tool
 
-This tool is able to draw root locus of time delay systems
+This tool is able to draw root-locus of time-delay systems. The tool is able to plot root-locus of open-loop system characterized by transfer function
 
 $$ H(s) = \frac{h_\mathrm{num}(s)}{h_\mathrm{den}(s)} $$
 
 where $h_\mathrm{num}(s)$ and $h_\mathrm{den}(s)$ represent quasipolynomials in form of
 
 $$ 
-h(s) = \sum_{i=1}^{N} p_\mathrm{i} e^{-\alpha_\mathrm{i}s}
+h(s) = \sum_{i=1}^{N} p_\mathrm{i} e^{-\tau_\mathrm{i}s}
 $$
 
 where
 
 $$
-p_\mathrm{i}(s) = \sum_{j=1}^{n} \beta_\mathrm{ij} s^{n-j}
+p_\mathrm{i}(s) = \sum_{j=1}^{n} \gamma_\mathrm{ij} s^{n-j}
 $$
 
-Closed loop system is then characterized by roots (poles) of quasipolynomial
+Such representation allows user to call the tool as either tdrlocus(reg, num, den) or tdrlocus(reg, numP, numD, denP, denD).
+The first argument reg defines the region of the root-locus plot using a 4-element array:
 
-$$
-h(s) = h_\mathrm{den}(s) + K \cdot h_\mathrm{num}(s)
-$$
+reg = [reMin, reMax, imMin, imMax]
+
+	•	reMin, reMax – lower and upper bounds for the real axis
+	•	imMin, imMax – lower and upper bounds for the imaginary axis
+
+All values must be real numbers. This region specifies the area of the complex plane that will be visualized in the root-locus plot.
+
+
 
 The tool is callable by tdrlocus().\
 It can be called without any arguments, the clear workspace is then opened and region for computing open loop poles and zeroes is automatically set to Re = [-10,5] and Im = [0, 50]. If you want to draw the root locus for given system when calling the function, it must be in from of: tdrlocus(reg, numerator, denominator) or tdrlocus(reg, numP, numD, denP, denD). 
