@@ -80,49 +80,49 @@ This section provides brief overview of the implemented functions. For further i
 
 ### Working in GUI
 
-Most of the window is covered by complex plane with drawn root locus. It is possible to change gain using slider in the bottom of the figure. You can also change gain by directly editing value in bottom window. By clicking "Toggle pole direction" you can visualize pole movement direction for increasing gain (K value).
+Most of the GUI window is occupied by the complex plane, where the computed root-locus is plotted. The gain value can be adjusted using the slider at the bottom of the window. Alternatively, you can manually enter a specific gain value in the input box next to the slider. Clicking the “Toggle pole direction” button displays arrows that indicate the direction of pole movement as the gain $K$ increases.
 
-### Toolbar tools
+### Toolbar functions
 Going from left to right, there are following functions:
 
 #### ![Edit transfer function](images/fraction2_icon.png) Edit transfer function 
-You can change transfer function of the system directly in GUI, either by writing numerator and denominator directly in the string notation to corresponding windows or by loading numerator and denominator matrices from workspace.
+You can modify the system’s transfer function directly in the GUI, either by entering the numerator and denominator as strings in the corresponding input fields or by loading numerator and denominator matrices from the MATLAB workspace.
 
 #### ![Changing parametric values](images/var_param_icon.png) Changing parametric values 
-Numerical values can be substituted by parametric notation in a form of "K...", where "..." represents any integer value ("K1", "K24" etc.). Each parametric value is initiated to value = 1. By clicking second leftmost button on the toolbar, you can easily change those values inside GUI without rewriting whole transfer function. This can be useful, for example, for easy time delay editing.
+Numerical values can be replaced with parameters in the form of "K...", where "..." is any integer (e.g., "K1", "K24"). Each parameter is initialized with a value of 1. By clicking the second-leftmost button on the toolbar, you can easily modify these values in the GUI without rewriting the entire transfer function. This is particularly useful for quickly adjusting time delays or gain values.
 
 #### ![Changing gain by dragging poles](images/move_poles_icon.png) Changing gain by dragging poles 
-When this function turned on, you can move poles, thus changing gain, by holding and moving poles on a complex plane.
+When this function is enabled, you can adjust the gain by clicking and dragging poles directly on the complex plane.
 
 #### ![Select plot region](images/region_icon_16px.png) Select plot region 
-This function opens popup figure, where drawn region can be changed inside the GUI.
+Opens a pop-up window that allows you to modify the plot region directly within the GUI.
 
 #### ![Auto adjust plot region](images/region_auto_icon_18px.png) Auto adjust plot region 
-This button changes drawn region to fit current section on complex plane.
+Automatically adjusts the plot region to fit the currently visible portion of the root-locus on the complex plane.
 
 #### ![Add real pole](images/pole_icon.png) Add real pole 
-Adds real pole to the system by clicking on complex plane.
+Adds a real pole to the system by clicking on the complex plane.
 
 #### ![Add imaginary poles](images/poles_icon.png) Add imaginary poles 
-Adds two complex conjurates imaginary poles by clicking on complex plane.
+Adds a pair of complex-conjugate poles by clicking on the complex plane.
 
 #### ![Add real zero](images/zero_icon.png) Add real zero 
-Adds real zero to the system by clicking on complex plane.
+Adds a real zero to the system by clicking on the complex plane.
 
 #### ![Add imaginary zeros](images/zeros_icon.png) Add imaginary zeros 
-Adds two complex conjurates imaginary zeros by clicking on complex plane.
+Adds a pair of complex-conjugate zeros by clicking on the complex plane.
 
 #### ![Pan function](images/pan_icon.png) Pan function 
-This function enables/disables pan tool.
+Enables or disables the pan tool for navigating the complex plane.
 
 #### ![Zoom in function](images/zoom_in_icon.png) Zoom in function 
-This function enables/disables zoom in function.
+Enables or disables the zoom-in tool for magnifying a region of the complex plane.
 
 #### ![Zoom out function](images/zoom_out_icon.png) Zoom out function 
-This function enables/disables zoom out function.
+Enables or disables the zoom-out tool to view a wider region of the complex plane.
 
 #### ![Undo button](images/undo_icon.png) Undo button 
-This button takes user back to previous state on complex plane.
+Reverts to the previous state of the system on the complex plane.
 
 ## references
 <a id="1">[1]</a>
