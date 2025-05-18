@@ -64,7 +64,8 @@ D =
 \end{bmatrix}
 $$
 
-Matrix notation of transfer function example will have form
+This notation prevents any bugs that may occur by interpreting the system with string notation. 
+Matrix notation of transfer function from the example will have form
 
 <pre>
 numP = [1; 1];
