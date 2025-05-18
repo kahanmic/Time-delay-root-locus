@@ -26,20 +26,20 @@ $$
 Such representation allows user to call the tool as either tdrlocus(reg, num, den) or tdrlocus(reg, numP, numD, denP, denD).
 The first argument, reg, defines the boundaries of the root-locus plot region using a 4-element array:
 
-\pre
+<pre>
 reg = [reMin, reMax, imMin, imMax]
 </pre>
 
 All values must be real numbers. This region specifies the area of the complex plane that will be visualized in the root-locus plot.
 Example of such region is
 
-\pre
+<pre>
 reg = [-10, 5, 0, 50];
 </pre>
 
 The call tdrlocus(reg, num, den) requires the arguments 'num' and 'den' as string values. Example of such representation is 
 
-\pre
+<pre>
 num = "1+exp(-s)";
 den = "s^3+6*s^2+5*s+(2*s^2+7*s)*exp(-s)"
 </pre>
@@ -68,7 +68,7 @@ $$
 
 Matrix notation of transfer function example will have form
 
-\pre
+<pre>
 numP = [1; 1];
 numD = [0; 1];
 denP = [1, 6, 5, 0; 0, 2, 7, 0];
