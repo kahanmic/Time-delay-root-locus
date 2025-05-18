@@ -54,9 +54,7 @@ P =
 \vdots & & & \vdots \\
 \gamma_\mathrm{N1} & ... & ... & \gamma_\mathrm{Nn}
 \end{bmatrix}
-
 \hspace{10pt}
-
 D =
 \begin{bmatrix}
 \tau_\mathrm{1}  \\
