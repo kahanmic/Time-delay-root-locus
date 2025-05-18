@@ -28,8 +28,8 @@ The first argument reg defines the region of the root-locus plot using a 4-eleme
 
 reg = [reMin, reMax, imMin, imMax]
 
-	•	reMin, reMax – lower and upper bounds for the real axis
-	•	imMin, imMax – lower and upper bounds for the imaginary axis
+•	reMin, reMax – lower and upper bounds for the real axis
+•	imMin, imMax – lower and upper bounds for the imaginary axis
 
 All values must be real numbers. This region specifies the area of the complex plane that will be visualized in the root-locus plot.
 
