@@ -17,7 +17,7 @@ $$
 h(s) = \sum_{i=1}^{N} p_\mathrm{i} e^{-\tau_\mathrm{i}s}
 $$
 
-where
+where $p_\mathrm{i}(s)$ represent polynomial in form of
 
 $$
 p_\mathrm{i}(s) = \sum_{j=1}^{n} \gamma_\mathrm{ij} s^{n-j}
@@ -26,50 +26,56 @@ $$
 Such representation allows user to call the tool as either tdrlocus(reg, num, den) or tdrlocus(reg, numP, numD, denP, denD).
 The first argument, reg, defines the boundaries of the root-locus plot region using a 4-element array:
 
+\pre
 reg = [reMin, reMax, imMin, imMax]
-
-<pre>
-- `reMin`, `reMax` – lower and upper limits of the **real axis**
-- `imMin`, `imMax` – lower and upper limits of the **imaginary axis**
 </pre>
 
-
 All values must be real numbers. This region specifies the area of the complex plane that will be visualized in the root-locus plot.
+Example of such region is
 
+\pre
+reg = [-10, 5, 0, 50];
+</pre>
 
-It can be called without any arguments, the clear workspace is then opened and region for computing open loop poles and zeroes is automatically set to Re = [-10,5] and Im = [0, 50]. If you want to draw the root locus for given system when calling the function, it must be in from of: tdrlocus(reg, numerator, denominator) or tdrlocus(reg, numP, numD, denP, denD). 
+The call tdrlocus(reg, num, den) requires the arguments 'num' and 'den' as string values. Example of such representation is 
 
-Argument region is a vector of length 4 that specifies thresholds of [minReal maxReal minImag maxImag]. Negative minImag values are unnecessary, positive half of the imaginary complex plane is mirrored to the negative on. 
+\pre
+num = "1+exp(-s)";
+den = "s^3+6*s^2+5*s+(2*s^2+7*s)*exp(-s)"
+</pre>
 
-Arguments numerator and denominator must be string values written in form of "(poly1)\*exp(-delay1\*s)+(poly2)\*exp(-delay2\*s)+...+(polyN)\*exp(-delayN\*s)". It is recommended to write polynomials in brackets and omit "\*exp(-0\*s)", in that case write only "(poly)". It is mandatory to use "+" outside the brackets. 
-
-Arguments numP, numD, denP, denD must be matrix notations of quasipolynomial. \
-The P matrix represents coefficients of polynomials
+The tdrlocus(reg, numP, numD, denP, denD) utilizes matrix representation of the quasipolynomial. For quasipolynomial in form described above, it's matrix representation has form of: 
 
 $$
 P =
 \begin{bmatrix}
-\beta_\mathrm{11} & \beta_\mathrm{12} & \cdots & \beta_\mathrm{1n} \\
-\beta_\mathrm{21} & \ddots & & \vdots \\
+\gamma_\mathrm{11} & \gamma_\mathrm{12} & \cdots & \gamma_\mathrm{1n} \\
+\gamma_\mathrm{21} & \ddots & & \vdots \\
 \vdots & & & \vdots \\
-\beta_\mathrm{N1} & ... & ... & \beta_\mathrm{Nn}
+\gamma_\mathrm{N1} & ... & ... & \gamma_\mathrm{Nn}
 \end{bmatrix}
-$$
 
-and D matrices represent delays of quasipolynomials
+\hspace{10pt}
 
-$$
 D =
 \begin{bmatrix}
-\alpha_\mathrm{1}  \\
-\alpha_\mathrm{2} \\
+\tau_\mathrm{1}  \\
+\tau_\mathrm{2} \\
 \vdots \\
-\alpha_\mathrm{N}
+\tau_\mathrm{N}
 \end{bmatrix}
 $$
 
-Each row in P matrix, i = 1,...,N is specific for given delay and each column j = 1,...,n specifies coefficient for given order of monomial. Coefficient j = 1 is tied to s^(n-1), ... j = n is coefficient of a constant. \
-"num" and "den" specifies numerator or denominator quasipolynomial. Numerator and denominator matrices must not have same delays.
+Matrix notation of transfer function example will have form
+
+\pre
+numP = [1; 1];
+numD = [0; 1];
+denP = [1, 6, 5, 0; 0, 2, 7, 0];
+denD = [0; 1];
+</pre>
+
+The tdrlocus tool can be called without any input arguments which opens blank GUI. The region is then automatically set to reg = [-10, 5, 0, 50] and system transfer function can be defined directly within the GUI.
 
 ## Tool functions
 
