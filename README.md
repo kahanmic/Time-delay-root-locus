@@ -76,6 +76,7 @@ denD = [0; 1];
 The tdrlocus tool can be called without any input arguments which opens blank GUI. The region is then automatically set to reg = [-10, 5, 0, 50] and system transfer function can be defined directly within the GUI.
 
 ## Tool functions
+This section provides brief overview of the implemented functions. For further information see website: https://time-delay-root-locus-d308d0.gitlab.io
 
 ### Working in GUI
 
