@@ -24,18 +24,19 @@ p_\mathrm{i}(s) = \sum_{j=1}^{n} \gamma_\mathrm{ij} s^{n-j}
 $$
 
 Such representation allows user to call the tool as either tdrlocus(reg, num, den) or tdrlocus(reg, numP, numD, denP, denD).
-The first argument reg defines the region of the root-locus plot using a 4-element array:
+The first argument, reg, defines the boundaries of the root-locus plot region using a 4-element array:
 
 reg = [reMin, reMax, imMin, imMax]
 
-•	reMin, reMax – lower and upper bounds for the real axis
-•	imMin, imMax – lower and upper bounds for the imaginary axis
+<pre>
+- `reMin`, `reMax` – lower and upper limits of the **real axis**
+- `imMin`, `imMax` – lower and upper limits of the **imaginary axis**
+</pre>
+
 
 All values must be real numbers. This region specifies the area of the complex plane that will be visualized in the root-locus plot.
 
 
-
-The tool is callable by tdrlocus().\
 It can be called without any arguments, the clear workspace is then opened and region for computing open loop poles and zeroes is automatically set to Re = [-10,5] and Im = [0, 50]. If you want to draw the root locus for given system when calling the function, it must be in from of: tdrlocus(reg, numerator, denominator) or tdrlocus(reg, numP, numD, denP, denD). 
 
 Argument region is a vector of length 4 that specifies thresholds of [minReal maxReal minImag maxImag]. Negative minImag values are unnecessary, positive half of the imaginary complex plane is mirrored to the negative on. 
