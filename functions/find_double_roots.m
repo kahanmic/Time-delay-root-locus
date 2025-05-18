@@ -1,4 +1,4 @@
-function [s_r, K_r] = find_double_roots(s0, K0, numP, denP, D, iter)
+function [s_r, K_r] = find_double_roots(s0, K0, numP, denP, D)
 % Finds double roots of quasipolynomial and corresponding gain value
     Kinit = K0;
     Sinit = s0;
@@ -22,10 +22,12 @@ function [s_r, K_r] = find_double_roots(s0, K0, numP, denP, D, iter)
         K0 = next(2);
         cnt = cnt+1;
     end
-    s_r = s0;
-    K_r = K0;
-
-    if K_r < 0 && iter < 5
-        [s_r, K_r] = find_double_roots(Sinit, Kinit+20, numP, denP, D, iter+1);
+    
+    if max(abs(g)) <= 1e-4
+        s_r = s0;
+        K_r = K0;
+    else
+        s_r = NaN;
+        K_r = NaN;
     end
 end

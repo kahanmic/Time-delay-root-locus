@@ -37,7 +37,7 @@ function [poles, splits] = drawRLbranches(initPoles, KmaxBranches, breakpoints, 
                     currP = denP+K*numP;
                     s = s+ds;
                     s = newton_method(s, currP, D, 1e-6); % Approx
-                    [~, rts] = compute_roots(reg, denP+K*numP, D, precisionQPmR, 1) %QPmR
+                    [~, rts] = compute_roots(reg, denP+K*numP, D, precisionQPmR, 1); %QPmR
                     newRts = rearange(s, rts); % Match previous approx 
                     poles = addNewPoles(poles, currPoleMat); % Add previous points to branches
                     currPoleMat = newRts;
@@ -88,8 +88,6 @@ function [poles, splits] = drawRLbranches(initPoles, KmaxBranches, breakpoints, 
     % Add different number of poles
     function newPoles = addNewPoles(oldPoles, addedPolesMat)
         i = 1;
-        oldPoles
-        addedPolesMat
         while i <= length(oldPoles)
             oldPoles{i}(end+1:end+size(addedPolesMat, 1)) = addedPolesMat(:,i);
             i = i+1;
@@ -105,21 +103,26 @@ function [poles, splits] = drawRLbranches(initPoles, KmaxBranches, breakpoints, 
     function [joinLinesOut, polesOut, currPoleMatOut] = ...
             breakpointPoles(joinLinesIn, polesIn, currPoleMatIn, K, reg, ...
             denP, numP, D, precisionQPmR)
+        
         lastPoles = currPoleMatIn(end,:);
         numPolesBP = argp_integral(reg, denP+K*numP, D, 0.01);
+
         [~, breakpointPoles] = compute_roots(reg, denP+K*numP, D, precisionQPmR, 1);
         
         % correction
-        while length(breakpointPoles) ~= length(lastPoles)
-            K = K - 0.01;
-            [~, breakpointPoles] = compute_roots(reg, denP+(K-0.01)*numP, D, precisionQPmR, 1);
+        cnt1 = 1;
+        while length(breakpointPoles) ~= length(lastPoles) && K > 0 && cnt1 < 20
+            K = K - K/20;
+            [~, breakpointPoles] = compute_roots(reg, denP+K*numP, D, precisionQPmR, 1);
+            cnt1 = cnt1+1;
         end
         breakpointPoles = rearange(lastPoles, breakpointPoles);
-        dk = 0.01;
-        
+        %dk = 0.01;
+        dk = K/10;
         % find gain after split
-        while argp_integral(reg, denP+(K+dk)*numP, D, 0.01) == numPolesBP && dk < 2
-            dk = dk+0.01;
+        while argp_integral(reg, denP+(K+dk)*numP, D, 0.01) == numPolesBP && dk < K/4
+            dk = dk+K/20;
+            %dk = dk+0.05;
         end
         [~, nextBreakpointPoles] = compute_roots(reg, denP+(K+dk)*numP, D, precisionQPmR, 1);
         
@@ -153,6 +156,7 @@ function [poles, splits] = drawRLbranches(initPoles, KmaxBranches, breakpoints, 
             currPoleMatOut = currPoleMatIn;
            
         else % Splitting from real to imaginary
+            
             nearRealIdxs = find(imag(breakpointPoles) < 0.1);
             realVals = breakpointPoles(nearRealIdxs);
             idxs = [1, 2];

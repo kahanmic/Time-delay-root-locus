@@ -2,6 +2,7 @@ function [newDs, polyRoots] = compute_roots(reg, P, D, ds, iteration)
 % Compute roots of quasipolynomial on given region
     if D == 0
         polyRoots = roots(P).';
+        polyRoots = polyRoots(imag(polyRoots) >= 0);
         newDs = ds;
     else
         reg = reg + [-3*ds 3*ds 0 3*ds];
@@ -9,7 +10,6 @@ function [newDs, polyRoots] = compute_roots(reg, P, D, ds, iteration)
         beta = bmin:ds:bmax;
         omega = wmin:ds:wmax;
         
-    
         Fgrid = evaluate_poly(reg, P, D, ds, true);
         realContour = contourc(beta, omega, real(Fgrid), [0 0]);
         [contLensRe, pointsReal, ~] = extract_contours(realContour);
@@ -23,16 +23,17 @@ function [newDs, polyRoots] = compute_roots(reg, P, D, ds, iteration)
         Fimag = evaluate_poly(pointsImag, P, D, ds, false);
         rootsApprox = approximate_root_position(pointsReal, Freal, pointsImag, Fimag, inedxCS, ds);
     
-        polyRootsInit = newton_method(rootsApprox, P, D, 1e-6);
+        polyRootsInit = newton_method(rootsApprox, P, D, 1e-4);
         polyRoots = findDuplicates(polyRootsInit, P, D); % detects double roots
         argpShift = min(abs(imag(polyRoots(imag(polyRoots) ~= 0))));
+        
         numRoots = argp_integral(reg, P, D, argpShift/2);
     
         if length(polyRoots) ~= numRoots && iteration < 6
            
-            if ds/2 > 1e-3
-                [newDs, polyRoots] = compute_roots(reg - [-3*ds 3*ds 0 3*ds], P, D, ds/2, iteration+1);
-            end
+
+            [newDs, polyRoots] = compute_roots(reg - [-3*ds 3*ds 0 3*ds], P, D, ds/2, iteration+1);
+      
         else
             newDs = ds;
         end

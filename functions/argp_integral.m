@@ -1,7 +1,7 @@
 function num_roots = argp_integral(Reg, P, D, diff_s)
 % Compute numerical argument principal integral
 
-    diff_s = min([diff_s, 0.01]);
+    diff_s = min([diff_s, 0.05]);
     enlarge = [-diff_s, diff_s, -diff_s, diff_s];
     
     region = Reg + enlarge;

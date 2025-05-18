@@ -7,7 +7,6 @@ function [branchNums, K] = get_num_branches(reg, numP, denP, D, ds)
         P = denP + Kcurr*numP;
         numBranchesArray(i) = argp_integral(reg, P, D, ds);
     end
-    
     [maxNumBranches, maxIdx] = max(numBranchesArray);
     numSteps = maxNumBranches - numBranchesArray(1);
     branchMin = numBranchesArray(1);
